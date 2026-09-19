@@ -9,9 +9,27 @@ Ver el plan completo de arquitectura y roadmap en
 
 ## Estado actual
 
-**Fase 1 completa** (esqueleto, esquema de base de datos, healthcheck) **y
+**Fase 1 y Fase 2 completas** (esqueleto, esquema de base de datos, healthcheck,
+webhook de WhatsApp Cloud API funcionando de punta a punta con eco simple) **y
 Fase 9 adelantada parcialmente** (infraestructura de hosting ya operativa,
 aunque el resto de las fases del roadmap todavía no está implementado).
+
+### WhatsApp Cloud API — estado
+
+- **Número real en producción**: `+54 2284 15-54-2607`, dedicado 100% a la
+  Cloud API (no lo uses en ninguna app de WhatsApp instalada, se
+  desconfiguraría).
+- **App de Meta**: "Fortin Bailable" (`developers.facebook.com`, app id
+  `1075933261860482`), WhatsApp Business Account "fortin"
+  (`2136530420265686`).
+- **Token de acceso**: generado desde un **System User** (`FortinBailableBot`,
+  rol Admin) en Business Settings, con expiración **"Nunca"** y permisos
+  `whatsapp_business_messaging` + `whatsapp_business_management`. Los tokens
+  generados desde el botón rápido de "Paso 1: Pruébalo" son de corta duración
+  y no sirven para producción — ya causaron una falla real en esta sesión.
+- **App sin publicar todavía**: para escalar a muchos usuarios en algún
+  momento va a hacer falta completar "Paso 3: Verificación del negocio" en
+  Meta — no bloquea el uso actual con el número propio.
 
 ### Infraestructura desplegada
 
