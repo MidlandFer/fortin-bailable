@@ -49,7 +49,7 @@ export async function getActiveArtistOptions(): Promise<ArtistOption[]> {
     stock_limit: number | null;
     sold_count: number;
     reserved_count: number;
-  }>(`${ACTIVE_STAGE_QUERY} ORDER BY a.id`);
+  }>(ACTIVE_STAGE_QUERY);
 
   return result.rows.map((r) => ({
     artistId: r.artist_id,
