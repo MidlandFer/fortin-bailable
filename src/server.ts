@@ -1,11 +1,20 @@
 import express from "express";
 import { pool } from "./db/pool";
+import { createWhatsAppWebhookRouter } from "./whatsapp/webhook";
 
 export function createServer() {
   const app = express();
 
-  app.use(express.json());
+  app.use(
+    express.json({
+      verify: (req, _res, buf) => {
+        (req as express.Request & { rawBody?: Buffer }).rawBody = buf;
+      },
+    }),
+  );
   app.use(express.urlencoded({ extended: true }));
+
+  app.use("/webhooks/whatsapp", createWhatsAppWebhookRouter());
 
   app.get("/health", async (_req, res) => {
     try {
