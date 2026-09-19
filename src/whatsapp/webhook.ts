@@ -4,6 +4,8 @@ import { Router as createRouter } from "express";
 import { env } from "../config/env";
 import { markAsRead, sendText } from "./client";
 import type { WhatsAppWebhookPayload } from "./types";
+import { handleIncomingMessage } from "../bot/conversationStateMachine";
+import { messages } from "../bot/messages";
 
 function verifySignature(req: Request): boolean {
   if (!env.WHATSAPP_APP_SECRET) return false;
@@ -59,8 +61,8 @@ export function createWhatsAppWebhookRouter(): Router {
 
     for (const entry of payload.entry ?? []) {
       for (const change of entry.changes ?? []) {
-        const messages = change.value.messages ?? [];
-        for (const message of messages) {
+        const inboundMessages = change.value.messages ?? [];
+        for (const message of inboundMessages) {
           try {
             await markAsRead(message.id);
           } catch (err) {
@@ -70,13 +72,19 @@ export function createWhatsAppWebhookRouter(): Router {
           if (message.type === "text" && message.text) {
             console.log(`Mensaje de ${message.from}: ${message.text.body}`);
             try {
-              await sendText(
-                message.from,
-                "¡Hola! Soy el colaborador del Fortín Bailable. Todavía estoy en construcción, pronto vas a poder comprar tus entradas por acá.",
-              );
+              const reply = await handleIncomingMessage(message.from, message.text.body);
+              await sendText(message.from, reply);
             } catch (err) {
-              console.error("Error al responder por WhatsApp:", err);
+              console.error("Error al procesar el mensaje:", err);
+              try {
+                await sendText(message.from, messages.errorInesperado);
+              } catch (sendErr) {
+                console.error("Error al avisar del error por WhatsApp:", sendErr);
+              }
             }
+          } else if (message.type === "image") {
+            // TODO (Fase 4): guardar comprobante_media_id en la orden activa para auditoría.
+            console.log(`Imagen recibida de ${message.from} (media id: ${message.image?.id})`);
           }
         }
       }

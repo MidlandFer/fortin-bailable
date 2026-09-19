@@ -1,0 +1,89 @@
+import type { ArtistOption } from "../tickets/stockService";
+
+function formatMoney(amount: number): string {
+  return amount.toLocaleString("es-AR", { style: "currency", currency: "ARS" });
+}
+
+function artistListText(artists: ArtistOption[]): string {
+  return artists
+    .map((a, i) => `${i + 1}. ${a.artistName} — ${formatMoney(a.price)} (${a.stageName})`)
+    .join("\n");
+}
+
+export const messages = {
+  saludoInicial:
+    "¡Hola! Soy el colaborador del Fortín Bailable. ¿Necesitás comprar entradas? Respondé *Sí* para arrancar.",
+
+  noEntendidoInteres:
+    "No te entendí. Si querés comprar entradas, respondé *Sí*. Si necesitás otra cosa, escribí *ayuda*.",
+
+  despedida: "¡Buenísimo! Cuando quieras comprar entradas, escribime *Sí* y arrancamos. 🕺💃",
+
+  sinArtistasDisponibles:
+    "Por ahora no tenemos entradas a la venta. Volvé a escribirnos más adelante, ¡gracias!",
+
+  pedirArtista: (artists: ArtistOption[]) =>
+    `Buenísimo. ¿Para qué artista querés comprar? Respondé con el número:\n\n${artistListText(artists)}`,
+
+  artistaInvalido: (artists: ArtistOption[]) =>
+    `No encontré esa opción. Elegí un número de la lista:\n\n${artistListText(artists)}`,
+
+  artistaAgotado: "Ese artista ya no tiene entradas disponibles en esta etapa. Elegí otro:",
+
+  pedirCantidad: (artistName: string, stock: number | null) =>
+    `¿Cuántas entradas de *${artistName}* querés comprar?` +
+    (stock !== null ? ` (quedan ${stock} disponibles)` : ""),
+
+  cantidadInvalida: "Escribí un número válido de entradas (por ejemplo: 1, 2, 3...).",
+
+  stockInsuficiente: (stock: number) =>
+    `Solo quedan ${stock} entradas disponibles para ese artista. Escribí una cantidad menor o igual.`,
+
+  ordenCreada: (params: {
+    artistName: string;
+    quantity: number;
+    totalAmount: number;
+    alias: string;
+    ttlMinutes: number;
+  }) =>
+    `Perfecto, reservé *${params.quantity}* entrada(s) de *${params.artistName}*.\n\n` +
+    `*Monto a transferir: ${formatMoney(params.totalAmount)}*\n` +
+    `Alias de Mercado Pago: *${params.alias}*\n\n` +
+    `Transferí ese monto exacto y después escribime *ya transferí*. ` +
+    `Tenés ${params.ttlMinutes} minutos antes de que se libere la reserva.`,
+
+  pedirComprobante:
+    "Mandame una foto o captura del comprobante de la transferencia, y después escribí *ya transferí*.",
+
+  verificandoPago: "Dale, estamos revisando la transferencia. Puede tardar unos minutos, ya te aviso.",
+
+  pagoConfirmadoPedirNombre: "¡Recibimos tu pago! Ahora decime tu *nombre y apellido* completo.",
+
+  nombreInvalido: "Decime tu nombre y apellido completo (nombre y apellido, separados por un espacio).",
+
+  pedirDni: "Gracias. Ahora pasame tu *DNI* (sin puntos).",
+
+  dniInvalido: "Ese DNI no parece válido. Mandalo de nuevo, solo los números (7 u 8 dígitos).",
+
+  pedirCuit: "Perfecto. Por último, tu *CUIT o CUIL* (11 dígitos, sin guiones).",
+
+  cuitInvalido: "Ese CUIT/CUIL no es válido. Mandalo de nuevo, los 11 dígitos sin guiones.",
+
+  compraCompleta: (quantity: number, artistName: string) =>
+    `¡Listo! Tu compra de *${quantity}* entrada(s) para *${artistName}* quedó confirmada. ` +
+    `En breve vas a recibir tu código QR — presentalo en la entrada del evento junto a tu DNI.\n\n` +
+    `¡Nos vemos en el Fortín! 🕺💃`,
+
+  cancelado: "Cancelé la compra en curso. Cuando quieras arrancar de nuevo, escribime *Sí*.",
+
+  ordenExpirada:
+    "Se venció el tiempo para transferir y liberamos la reserva. Si todavía querés comprar, escribime *Sí* de nuevo.",
+
+  ordenEnCurso:
+    "Ya tenés una compra en curso. Escribí *cancelar* si querés arrancar de nuevo, o seguí con lo que te pedí antes.",
+
+  ayuda:
+    "Puedo ayudarte a comprar entradas para el Fortín Bailable. Escribí *Sí* para arrancar, o *cancelar* para cortar una compra en curso.",
+
+  errorInesperado: "Uh, tuvimos un problema de nuestro lado. Probá de nuevo en un rato, disculpá.",
+};
