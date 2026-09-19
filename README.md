@@ -9,10 +9,41 @@ Ver el plan completo de arquitectura y roadmap en
 
 ## Estado actual
 
-**Fase 1 completa**: esqueleto del proyecto, esquema de base de datos y
-healthcheck funcionando. Las fases siguientes (bot de WhatsApp, Mercado Pago,
-capa de IA, panel admin, PWA de escaneo, reportes) se van a ir agregando de
-forma incremental.
+**Fase 1 completa** (esqueleto, esquema de base de datos, healthcheck) **y
+Fase 9 adelantada parcialmente** (infraestructura de hosting ya operativa,
+aunque el resto de las fases del roadmap todavía no está implementado).
+
+### Infraestructura desplegada
+
+- **Servidor**: VPS de Hostinger (Ubuntu 24.04) con [Coolify](https://coolify.io)
+  como plataforma de despliegue (Docker + Traefik + Let's Encrypt automático).
+- **Panel de Coolify**: `https://appfortin.fortinbailable.com` (no confundir
+  con el dominio de la app — ver nota abajo).
+- **App en producción**: `https://bot.fortinbailable.com` — healthcheck en
+  `/health`. Este va a ser el dominio del webhook de WhatsApp (Fase 2).
+- **Base de datos**: Postgres 16 provisionado como recurso de Coolify dentro
+  del proyecto "Fortin Bailable" (ambiente "production"), con las migraciones
+  de `src/db/migrations/` ya aplicadas y el usuario admin inicial ya creado.
+- **Repositorio**: `github.com/MidlandFer/fortin-bailable` (privado). Coolify
+  hace pull vía deploy key propia; el push desde esta PC usa otra deploy key
+  dedicada (`~/.ssh/fortin_bailable_github`).
+- **Acceso SSH al servidor**: por clave (`~/.ssh/fortin_bailable_deploy`),
+  usuario `root`. El login por contraseña sigue habilitado por ahora.
+
+**⚠️ Importante — dominios**: `appfortin.fortinbailable.com` está reservado
+para el panel de Coolify (así se configuró al instalar Coolify en el
+servidor). Cualquier app nueva que se despliegue en este mismo servidor tiene
+que usar un subdominio *distinto* (ej. `bot`, `admin`, `scanner`) — asignarle
+el mismo dominio que Coolify genera un conflicto de ruteo en Traefik.
+
+El deploy no es automático todavía: cada `git push` requiere disparar un
+nuevo deploy manualmente (por la API de Coolify o desde su panel). Configurar
+el webhook de auto-deploy queda pendiente para cuando se retome la Fase 9
+formalmente.
+
+Las fases siguientes del roadmap (bot de WhatsApp, Mercado Pago, capa de IA,
+panel admin, PWA de escaneo, reportes) todavía no están implementadas y se
+van a ir agregando de forma incremental.
 
 ## Requisitos
 
