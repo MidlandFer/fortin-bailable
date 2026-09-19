@@ -72,7 +72,7 @@ export function createWhatsAppWebhookRouter(): Router {
             try {
               await sendText(
                 message.from,
-                "¡Hola! Soy el bot de Fortín Bailable. Todavía estoy en construcción, pronto vas a poder comprar tus entradas por acá.",
+                "¡Hola! Soy el colaborador del Fortín Bailable. Todavía estoy en construcción, pronto vas a poder comprar tus entradas por acá.",
               );
             } catch (err) {
               console.error("Error al responder por WhatsApp:", err);
