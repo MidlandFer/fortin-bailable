@@ -11,13 +11,9 @@ function artistListText(artists: ArtistOption[]): string {
 }
 
 export const messages = {
-  saludoInicial:
-    "¡Hola! Soy el colaborador del Fortín Bailable. ¿Necesitás comprar entradas? Respondé *Sí* para arrancar.",
-
-  noEntendidoInteres:
-    "No te entendí. Si querés comprar entradas, respondé *Sí*. Si necesitás otra cosa, escribí *ayuda*.",
-
-  despedida: "¡Buenísimo! Cuando quieras comprar entradas, escribime *Sí* y arrancamos. 🕺💃",
+  saludoConMenu: (artists: ArtistOption[]) =>
+    `¡Hola! Soy el colaborador del Fortín Bailable. Estas son las entradas disponibles:\n\n` +
+    `${artistListText(artists)}\n\nRespondé con el número del artista que te interesa.`,
 
   sinArtistasDisponibles:
     "Por ahora no tenemos entradas a la venta. Volvé a escribirnos más adelante, ¡gracias!",
@@ -61,29 +57,19 @@ export const messages = {
 
   nombreInvalido: "Decime tu nombre y apellido completo (nombre y apellido, separados por un espacio).",
 
-  pedirDni: "Gracias. Ahora pasame tu *DNI* (sin puntos).",
+  pedirDni: "Gracias. Por último, pasame tu *DNI* (sin puntos) para generar tu entrada con QR.",
 
   dniInvalido: "Ese DNI no parece válido. Mandalo de nuevo, solo los números (7 u 8 dígitos).",
-
-  pedirCuit: "Perfecto. Por último, tu *CUIT o CUIL* (11 dígitos, sin guiones).",
-
-  cuitInvalido: "Ese CUIT/CUIL no es válido. Mandalo de nuevo, los 11 dígitos sin guiones.",
 
   compraCompleta: (quantity: number, artistName: string) =>
     `¡Listo! Tu compra de *${quantity}* entrada(s) para *${artistName}* quedó confirmada. ` +
     `En breve vas a recibir tu código QR — presentalo en la entrada del evento junto a tu DNI.\n\n` +
     `¡Nos vemos en el Fortín! 🕺💃`,
 
-  cancelado: "Cancelé la compra en curso. Cuando quieras arrancar de nuevo, escribime *Sí*.",
-
-  ordenExpirada:
-    "Se venció el tiempo para transferir y liberamos la reserva. Si todavía querés comprar, escribime *Sí* de nuevo.",
-
-  ordenEnCurso:
-    "Ya tenés una compra en curso. Escribí *cancelar* si querés arrancar de nuevo, o seguí con lo que te pedí antes.",
+  cancelado: "Cancelé la compra en curso. Escribime cuando quieras y te muestro las entradas de nuevo.",
 
   ayuda:
-    "Puedo ayudarte a comprar entradas para el Fortín Bailable. Escribí *Sí* para arrancar, o *cancelar* para cortar una compra en curso.",
+    "Puedo ayudarte a comprar entradas para el Fortín Bailable. Escribime cualquier cosa para ver las entradas disponibles, o *cancelar* para cortar una compra en curso.",
 
   errorInesperado: "Uh, tuvimos un problema de nuestro lado. Probá de nuevo en un rato, disculpá.",
 };

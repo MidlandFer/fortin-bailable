@@ -1,4 +1,4 @@
-import { CONVERSATION_STATES, MAX_RETRIES_RESPUESTA_AMBIGUA } from "../config/constants";
+import { CONVERSATION_STATES } from "../config/constants";
 import { env } from "../config/env";
 import { messages } from "./messages";
 import {
@@ -7,7 +7,7 @@ import {
   type Conversation,
   type ConversationContext,
 } from "./conversationRepo";
-import { isValidCuitCuil, isValidDni, isAffirmative, isNegative, parseQuantity } from "./validators";
+import { isValidDni, parseQuantity } from "./validators";
 import {
   getActiveArtistOptions,
   getArtistOptionByStageId,
@@ -19,7 +19,6 @@ import {
   getOrderById,
   setBuyerName,
   setBuyerDni,
-  setBuyerCuitCuil,
   markOrderPaidMock,
   cancelOrder,
   type Order,
@@ -68,31 +67,15 @@ async function handleGlobalCommand(
 }
 
 async function handleInicio(): Promise<HandlerResult> {
-  return { reply: messages.saludoInicial, nextState: CONVERSATION_STATES.ESPERANDO_INTERES };
-}
-
-async function handleEsperandoInteres(text: string, context: ConversationContext): Promise<HandlerResult> {
-  if (isAffirmative(text)) {
-    const artists = await getActiveArtistOptions();
-    if (artists.length === 0) {
-      return { reply: messages.sinArtistasDisponibles, nextState: CONVERSATION_STATES.INICIO };
-    }
-    return {
-      reply: messages.pedirArtista(artists),
-      nextState: CONVERSATION_STATES.ESPERANDO_ARTISTA,
-      contextPatch: { retries: 0 },
-    };
+  const artists = await getActiveArtistOptions();
+  if (artists.length === 0) {
+    return { reply: messages.sinArtistasDisponibles };
   }
-
-  if (isNegative(text)) {
-    return { reply: messages.despedida, nextState: CONVERSATION_STATES.INICIO };
-  }
-
-  const retries = (context.retries ?? 0) + 1;
-  if (retries > MAX_RETRIES_RESPUESTA_AMBIGUA) {
-    return { reply: messages.ayuda, nextState: CONVERSATION_STATES.INICIO };
-  }
-  return { reply: messages.noEntendidoInteres, contextPatch: { retries } };
+  return {
+    reply: messages.saludoConMenu(artists),
+    nextState: CONVERSATION_STATES.ESPERANDO_ARTISTA,
+    contextPatch: { retries: 0 },
+  };
 }
 
 function findArtistBySelection(text: string, artists: ArtistOption[]): ArtistOption | null {
@@ -211,23 +194,15 @@ async function handleEsperandoNombre(text: string, order: Order | null): Promise
   return { reply: messages.pedirDni, nextState: CONVERSATION_STATES.ESPERANDO_DNI };
 }
 
-async function handleEsperandoDni(text: string, order: Order | null): Promise<HandlerResult> {
-  if (!order || !isValidDni(text)) {
-    return { reply: messages.dniInvalido };
-  }
-  await setBuyerDni(order.id, text.trim());
-  return { reply: messages.pedirCuit, nextState: CONVERSATION_STATES.ESPERANDO_CUIT };
-}
-
-async function handleEsperandoCuit(
+async function handleEsperandoDni(
   text: string,
   order: Order | null,
   context: ConversationContext,
 ): Promise<HandlerResult> {
-  if (!order || !isValidCuitCuil(text)) {
-    return { reply: messages.cuitInvalido };
+  if (!order || !isValidDni(text)) {
+    return { reply: messages.dniInvalido };
   }
-  await setBuyerCuitCuil(order.id, text.trim());
+  await setBuyerDni(order.id, text.trim());
 
   const freshOrder = await getOrderById(order.id);
   if (!freshOrder) {
@@ -258,9 +233,6 @@ export async function handleIncomingMessage(phoneNumber: string, text: string): 
       case CONVERSATION_STATES.INICIO:
         result = await handleInicio();
         break;
-      case CONVERSATION_STATES.ESPERANDO_INTERES:
-        result = await handleEsperandoInteres(text, conversation.context);
-        break;
       case CONVERSATION_STATES.ESPERANDO_ARTISTA:
         result = await handleEsperandoArtista(text);
         break;
@@ -274,10 +246,7 @@ export async function handleIncomingMessage(phoneNumber: string, text: string): 
         result = await handleEsperandoNombre(text, order);
         break;
       case CONVERSATION_STATES.ESPERANDO_DNI:
-        result = await handleEsperandoDni(text, order);
-        break;
-      case CONVERSATION_STATES.ESPERANDO_CUIT:
-        result = await handleEsperandoCuit(text, order, conversation.context);
+        result = await handleEsperandoDni(text, order, conversation.context);
         break;
       default:
         result = await handleInicio();
