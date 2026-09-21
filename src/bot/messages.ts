@@ -13,13 +13,13 @@ function artistListText(artists: ArtistOption[]): string {
 export const messages = {
   saludoConMenu: (artists: ArtistOption[]) =>
     `¡Hola! 👋 Soy el colaborador del Fortín Bailable. Estas son las entradas disponibles 🎟️:\n\n` +
-    `${artistListText(artists)}\n\nRespondé con el número del artista que te interesa.`,
+    `${artistListText(artists)}\n\nRespondé con el nombre del artista o el número que te interesa.`,
 
   sinArtistasDisponibles:
     "Por ahora no tenemos entradas a la venta 😕. Volvé a escribirnos más adelante, ¡gracias!",
 
   pedirArtista: (artists: ArtistOption[]) =>
-    `Buenísimo 🙌. ¿Para qué artista querés comprar? Respondé con el número:\n\n${artistListText(artists)}`,
+    `Buenísimo 🙌. ¿Para qué artista querés comprar? Respondé con el nombre o el número:\n\n${artistListText(artists)}`,
 
   artistaInvalido: (artists: ArtistOption[]) =>
     `No encontré esa opción 🤔. Elegí un número de la lista:\n\n${artistListText(artists)}`,
