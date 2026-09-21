@@ -58,11 +58,11 @@ export const messages = {
 
   pagoConfirmadoPedirDatos:
     "¡Recibimos tu pago! ✅ Ahora pasame tu *nombre y apellido completo* junto con tu *DNI* " +
-    "en un solo mensaje, para generar tu entrada con QR.\n\nEjemplo: _Fernando Polanco 30334447_",
+    "en un solo mensaje, para generar tu entrada con QR.\n\nEjemplo: _Ezequiel Collado 29959999_",
 
   datosInvalidos:
     "No te entendí 🤨. Mandame tu nombre y apellido junto con tu DNI en un solo mensaje.\n\n" +
-    "Ejemplo: _Fernando Polanco 30334447_",
+    "Ejemplo: _Ezequiel Collado 29959999_",
 
   compraCompleta: (quantity: number, artistName: string) =>
     `¡Listo! 🎉 Tu compra de *${quantity}* entrada(s) para *${artistName}* quedó confirmada. ` +
