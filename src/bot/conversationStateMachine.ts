@@ -170,17 +170,17 @@ async function handleEsperandoCantidad(
 async function handleEsperandoComprobante(
   text: string,
   order: Order | null,
-  imageMediaId?: string,
+  mediaId?: string,
 ): Promise<HandlerResult> {
   if (!order) {
     return { reply: messages.errorInesperado, nextState: CONVERSATION_STATES.INICIO };
   }
 
   const normalized = text.trim().toLowerCase();
-  const avisoDeTransferencia = imageMediaId !== undefined || normalized.includes("ya transfer");
+  const avisoDeTransferencia = mediaId !== undefined || normalized.includes("ya transfer");
 
-  if (imageMediaId) {
-    await setComprobanteMediaId(order.id, imageMediaId);
+  if (mediaId) {
+    await setComprobanteMediaId(order.id, mediaId);
   }
 
   if (avisoDeTransferencia) {
@@ -227,7 +227,7 @@ async function handleEsperandoDatosPersonales(
 export async function handleIncomingMessage(
   phoneNumber: string,
   text: string,
-  imageMediaId?: string,
+  mediaId?: string,
 ): Promise<string> {
   const conversation = await getOrCreateConversation(phoneNumber);
 
@@ -250,7 +250,7 @@ export async function handleIncomingMessage(
         result = await handleEsperandoCantidad(text, conversation.context, phoneNumber);
         break;
       case CONVERSATION_STATES.ESPERANDO_COMPROBANTE:
-        result = await handleEsperandoComprobante(text, order, imageMediaId);
+        result = await handleEsperandoComprobante(text, order, mediaId);
         break;
       case CONVERSATION_STATES.ESPERANDO_DATOS_PERSONALES:
         result = await handleEsperandoDatosPersonales(text, order, conversation.context);

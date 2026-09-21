@@ -5,6 +5,7 @@ export interface WhatsAppInboundMessage {
   type: string;
   text?: { body: string };
   image?: { id: string; mime_type: string; sha256: string; caption?: string };
+  document?: { id: string; mime_type: string; sha256: string; filename?: string; caption?: string };
   interactive?: {
     type: string;
     button_reply?: { id: string; title: string };

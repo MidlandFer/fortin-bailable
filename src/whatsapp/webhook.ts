@@ -59,6 +59,20 @@ export function createWhatsAppWebhookRouter(): Router {
 
     const payload = req.body as WhatsAppWebhookPayload;
 
+    const processAndReply = async (from: string, text: string, mediaId?: string) => {
+      try {
+        const reply = await handleIncomingMessage(from, text, mediaId);
+        await sendText(from, reply);
+      } catch (err) {
+        console.error("Error al procesar el mensaje:", err);
+        try {
+          await sendText(from, messages.errorInesperado);
+        } catch (sendErr) {
+          console.error("Error al avisar del error por WhatsApp:", sendErr);
+        }
+      }
+    };
+
     for (const entry of payload.entry ?? []) {
       for (const change of entry.changes ?? []) {
         const inboundMessages = change.value.messages ?? [];
@@ -71,30 +85,15 @@ export function createWhatsAppWebhookRouter(): Router {
 
           if (message.type === "text" && message.text) {
             console.log(`Mensaje de ${message.from}: ${message.text.body}`);
-            try {
-              const reply = await handleIncomingMessage(message.from, message.text.body);
-              await sendText(message.from, reply);
-            } catch (err) {
-              console.error("Error al procesar el mensaje:", err);
-              try {
-                await sendText(message.from, messages.errorInesperado);
-              } catch (sendErr) {
-                console.error("Error al avisar del error por WhatsApp:", sendErr);
-              }
-            }
+            await processAndReply(message.from, message.text.body);
           } else if (message.type === "image" && message.image) {
             console.log(`Imagen recibida de ${message.from} (media id: ${message.image.id})`);
-            try {
-              const reply = await handleIncomingMessage(message.from, "", message.image.id);
-              await sendText(message.from, reply);
-            } catch (err) {
-              console.error("Error al procesar la imagen:", err);
-              try {
-                await sendText(message.from, messages.errorInesperado);
-              } catch (sendErr) {
-                console.error("Error al avisar del error por WhatsApp:", sendErr);
-              }
-            }
+            await processAndReply(message.from, "", message.image.id);
+          } else if (message.type === "document" && message.document) {
+            // Cubre el botón "Compartir comprobante" de Mercado Pago y similares,
+            // que a veces mandan el comprobante como documento/PDF en vez de foto.
+            console.log(`Documento recibido de ${message.from} (media id: ${message.document.id})`);
+            await processAndReply(message.from, "", message.document.id);
           }
         }
       }

@@ -45,12 +45,15 @@ export const messages = {
     `Perfecto ✅, reservé *${params.quantity}* entrada(s) de *${params.artistName}*.\n\n` +
     `💰 *Monto a transferir: ${formatMoney(params.totalAmount)}*\n` +
     `🏦 Alias de Mercado Pago: *${params.alias}*\n\n` +
-    `Transferí ese monto exacto y mandame la foto 📸 del comprobante — que se vea el *CBU/CVU*, el *CUIT/CUIL*, ` +
-    `el *N° de operación* y la *fecha y hora* (o escribime *ya transferí*). ` +
+    `Transferí ese monto exacto y mandame el comprobante — con la foto 📸, o con la opción ` +
+    `*"Compartir comprobante"* de Mercado Pago, lo que te resulte más cómodo. Que se vea el *CBU/CVU*, ` +
+    `el *CUIT/CUIL*, el *N° de operación* y la *fecha y hora* (o escribime *ya transferí*). ` +
     `⏱️ Tenés ${params.ttlMinutes} minutos antes de que se libere la reserva.`,
 
   pedirComprobante:
-    "Mandame la foto 📸 del comprobante de la transferencia. Que se vea el *CBU/CVU*, el *CUIT/CUIL*, " +
+    "Mandame el comprobante de la transferencia — con una foto 📸, o con la opción " +
+    '*"Compartir comprobante"* de Mercado Pago, lo que te resulte más cómodo. ' +
+    "Que se vea el *CBU/CVU*, el *CUIT/CUIL*, " +
     "el *N° de operación* y la *fecha y hora* — así podemos corroborar que llegó a la cuenta " +
     "(o escribí *ya transferí* si preferís avisarme por texto).",
 
