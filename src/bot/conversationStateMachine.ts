@@ -19,6 +19,7 @@ import {
   getOrderById,
   setBuyerName,
   setBuyerDni,
+  setComprobanteMediaId,
   markOrderPaidMock,
   cancelOrder,
   type Order,
@@ -166,15 +167,25 @@ async function handleEsperandoCantidad(
   };
 }
 
-async function handleEsperandoComprobante(text: string, order: Order | null): Promise<HandlerResult> {
+async function handleEsperandoComprobante(
+  text: string,
+  order: Order | null,
+  imageMediaId?: string,
+): Promise<HandlerResult> {
   if (!order) {
     return { reply: messages.errorInesperado, nextState: CONVERSATION_STATES.INICIO };
   }
 
   const normalized = text.trim().toLowerCase();
-  if (normalized.includes("ya transfer")) {
+  const avisoDeTransferencia = imageMediaId !== undefined || normalized.includes("ya transfer");
+
+  if (imageMediaId) {
+    await setComprobanteMediaId(order.id, imageMediaId);
+  }
+
+  if (avisoDeTransferencia) {
     // TODO (Fase 4): reemplazar por la verificación real contra Mercado Pago.
-    // Por ahora confirmamos el pago apenas el usuario avisa (mock de Fase 3).
+    // Por ahora confirmamos el pago apenas llega el comprobante o el aviso (mock de Fase 3).
     await markOrderPaidMock(order.id);
     return {
       reply: messages.pagoConfirmadoPedirNombre,
@@ -219,7 +230,11 @@ async function handleEsperandoDni(
   };
 }
 
-export async function handleIncomingMessage(phoneNumber: string, text: string): Promise<string> {
+export async function handleIncomingMessage(
+  phoneNumber: string,
+  text: string,
+  imageMediaId?: string,
+): Promise<string> {
   const conversation = await getOrCreateConversation(phoneNumber);
 
   const globalResult = await handleGlobalCommand(conversation, text);
@@ -241,7 +256,7 @@ export async function handleIncomingMessage(phoneNumber: string, text: string): 
         result = await handleEsperandoCantidad(text, conversation.context, phoneNumber);
         break;
       case CONVERSATION_STATES.ESPERANDO_COMPROBANTE:
-        result = await handleEsperandoComprobante(text, order);
+        result = await handleEsperandoComprobante(text, order, imageMediaId);
         break;
       case CONVERSATION_STATES.ESPERANDO_NOMBRE:
         result = await handleEsperandoNombre(text, order);

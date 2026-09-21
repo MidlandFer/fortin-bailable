@@ -110,6 +110,10 @@ export async function setBuyerDni(orderId: number, dni: string): Promise<void> {
   await pool.query(`UPDATE orders SET buyer_dni = $2 WHERE id = $1`, [orderId, dni]);
 }
 
+export async function setComprobanteMediaId(orderId: number, mediaId: string): Promise<void> {
+  await pool.query(`UPDATE orders SET comprobante_media_id = $2 WHERE id = $1`, [orderId, mediaId]);
+}
+
 export async function setBuyerCuitCuil(orderId: number, cuitCuil: string): Promise<void> {
   await pool.query(`UPDATE orders SET buyer_cuit_cuil = $2 WHERE id = $1`, [orderId, cuitCuil]);
 }

@@ -82,9 +82,19 @@ export function createWhatsAppWebhookRouter(): Router {
                 console.error("Error al avisar del error por WhatsApp:", sendErr);
               }
             }
-          } else if (message.type === "image") {
-            // TODO (Fase 4): guardar comprobante_media_id en la orden activa para auditoría.
-            console.log(`Imagen recibida de ${message.from} (media id: ${message.image?.id})`);
+          } else if (message.type === "image" && message.image) {
+            console.log(`Imagen recibida de ${message.from} (media id: ${message.image.id})`);
+            try {
+              const reply = await handleIncomingMessage(message.from, "", message.image.id);
+              await sendText(message.from, reply);
+            } catch (err) {
+              console.error("Error al procesar la imagen:", err);
+              try {
+                await sendText(message.from, messages.errorInesperado);
+              } catch (sendErr) {
+                console.error("Error al avisar del error por WhatsApp:", sendErr);
+              }
+            }
           }
         }
       }
