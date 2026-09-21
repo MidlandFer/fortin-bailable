@@ -23,7 +23,7 @@ import {
   cancelOrder,
   type Order,
 } from "../tickets/orderService";
-import { generateTicketsForOrder } from "../tickets/ticketService";
+import { generateAndSendTicketsForOrder } from "../tickets/ticketService";
 
 interface HandlerResult {
   reply: string;
@@ -208,10 +208,11 @@ async function handleEsperandoDni(
   if (!freshOrder) {
     return { reply: messages.errorInesperado, nextState: CONVERSATION_STATES.INICIO };
   }
-  await generateTicketsForOrder(freshOrder);
+  const artistName = context.artistName ?? "tu artista";
+  await generateAndSendTicketsForOrder(freshOrder, artistName);
 
   return {
-    reply: messages.compraCompleta(freshOrder.quantity, context.artistName ?? "tu artista"),
+    reply: messages.compraCompleta(freshOrder.quantity, artistName),
     nextState: CONVERSATION_STATES.INICIO,
     contextPatch: {},
     activeOrderId: null,

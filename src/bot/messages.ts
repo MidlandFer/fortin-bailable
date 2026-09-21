@@ -63,7 +63,7 @@ export const messages = {
 
   compraCompleta: (quantity: number, artistName: string) =>
     `¡Listo! Tu compra de *${quantity}* entrada(s) para *${artistName}* quedó confirmada. ` +
-    `En breve vas a recibir tu código QR — presentalo en la entrada del evento junto a tu DNI.\n\n` +
+    `Ya te mandamos tu(s) código(s) QR arriba — presentalos en la entrada del evento junto a tu DNI.\n\n` +
     `¡Nos vemos en el Fortín! 🕺💃`,
 
   cancelado: "Cancelé la compra en curso. Escribime cuando quieras y te muestro las entradas de nuevo.",
