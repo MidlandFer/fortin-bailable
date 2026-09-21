@@ -25,6 +25,42 @@ export function isValidCuitCuil(input: string): boolean {
   return expected === checkDigit;
 }
 
+export interface NameAndDni {
+  name: string;
+  dni: string;
+}
+
+/**
+ * Extrae nombre y apellido + DNI de un solo mensaje libre, por ejemplo:
+ * "Fernando Polanco 30334447", "30.334.447 Fernando Polanco" o
+ * "Fernando Polanco DNI 30334447". Devuelve null si no encuentra un DNI
+ * válido o si no queda un nombre con al menos dos palabras.
+ */
+export function parseNameAndDni(input: string): NameAndDni | null {
+  const tokens = input.trim().split(/\s+/).filter(Boolean);
+  let dni: string | null = null;
+  const nameTokens: string[] = [];
+
+  for (const token of tokens) {
+    if (!dni && /^[\d.]+$/.test(token)) {
+      const digitsOnly = normalizeDigits(token);
+      if (/^\d{7,8}$/.test(digitsOnly)) {
+        dni = digitsOnly;
+        continue;
+      }
+    }
+    if (/^(dni|nro\.?|n°|numero|número|documento):?$/i.test(token)) continue;
+    nameTokens.push(token.replace(/,$/, ""));
+  }
+
+  if (!dni) return null;
+
+  const name = nameTokens.join(" ").trim();
+  if (name.split(/\s+/).filter(Boolean).length < 2) return null;
+
+  return { name, dni };
+}
+
 export function parseQuantity(input: string): number | null {
   const trimmed = input.trim();
   if (!/^\d{1,2}$/.test(trimmed)) return null;

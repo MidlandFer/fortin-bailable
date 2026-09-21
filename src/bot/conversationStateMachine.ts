@@ -7,7 +7,7 @@ import {
   type Conversation,
   type ConversationContext,
 } from "./conversationRepo";
-import { isValidDni, parseQuantity } from "./validators";
+import { parseNameAndDni, parseQuantity } from "./validators";
 import {
   getActiveArtistOptions,
   getArtistOptionByStageId,
@@ -188,32 +188,26 @@ async function handleEsperandoComprobante(
     // Por ahora confirmamos el pago apenas llega el comprobante o el aviso (mock de Fase 3).
     await markOrderPaidMock(order.id);
     return {
-      reply: messages.pagoConfirmadoPedirNombre,
-      nextState: CONVERSATION_STATES.ESPERANDO_NOMBRE,
+      reply: messages.pagoConfirmadoPedirDatos,
+      nextState: CONVERSATION_STATES.ESPERANDO_DATOS_PERSONALES,
     };
   }
 
   return { reply: messages.pedirComprobante };
 }
 
-async function handleEsperandoNombre(text: string, order: Order | null): Promise<HandlerResult> {
-  const trimmed = text.trim();
-  if (!order || trimmed.split(/\s+/).length < 2) {
-    return { reply: messages.nombreInvalido };
-  }
-  await setBuyerName(order.id, trimmed);
-  return { reply: messages.pedirDni, nextState: CONVERSATION_STATES.ESPERANDO_DNI };
-}
-
-async function handleEsperandoDni(
+async function handleEsperandoDatosPersonales(
   text: string,
   order: Order | null,
   context: ConversationContext,
 ): Promise<HandlerResult> {
-  if (!order || !isValidDni(text)) {
-    return { reply: messages.dniInvalido };
+  const parsed = parseNameAndDni(text);
+  if (!order || !parsed) {
+    return { reply: messages.datosInvalidos };
   }
-  await setBuyerDni(order.id, text.trim());
+
+  await setBuyerName(order.id, parsed.name);
+  await setBuyerDni(order.id, parsed.dni);
 
   const freshOrder = await getOrderById(order.id);
   if (!freshOrder) {
@@ -258,11 +252,8 @@ export async function handleIncomingMessage(
       case CONVERSATION_STATES.ESPERANDO_COMPROBANTE:
         result = await handleEsperandoComprobante(text, order, imageMediaId);
         break;
-      case CONVERSATION_STATES.ESPERANDO_NOMBRE:
-        result = await handleEsperandoNombre(text, order);
-        break;
-      case CONVERSATION_STATES.ESPERANDO_DNI:
-        result = await handleEsperandoDni(text, order, conversation.context);
+      case CONVERSATION_STATES.ESPERANDO_DATOS_PERSONALES:
+        result = await handleEsperandoDatosPersonales(text, order, conversation.context);
         break;
       default:
         result = await handleInicio();
