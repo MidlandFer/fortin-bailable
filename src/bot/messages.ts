@@ -35,6 +35,15 @@ export const messages = {
   stockInsuficiente: (stock: number) =>
     `Solo quedan ${stock} entradas disponibles para ese artista 😬. Escribí una cantidad menor o igual.`,
 
+  confirmarCompra: (params: { artistName: string; quantity: number; unitPrice: number }) =>
+    `Decime si está todo bien 🧐:\n\n` +
+    `🎟️ *${params.quantity}* entrada(s) de *${params.artistName}*\n` +
+    `💰 ${formatMoney(params.unitPrice)} c/u — Total: *${formatMoney(params.unitPrice * params.quantity)}*\n\n` +
+    `Respondé *Sí* para confirmar, o decime el artista o la cantidad correcta si hay que cambiar algo.`,
+
+  confirmacionNoEntendida:
+    "No te entendí 🤔. Respondé *Sí* para confirmar la compra, o decime el artista o la cantidad correcta.",
+
   ordenCreada: (params: {
     artistName: string;
     quantity: number;

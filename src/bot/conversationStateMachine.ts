@@ -7,7 +7,7 @@ import {
   type Conversation,
   type ConversationContext,
 } from "./conversationRepo";
-import { parseNameAndDni, parseQuantity } from "./validators";
+import { isAffirmative, parseNameAndDni, parseQuantity } from "./validators";
 import {
   getActiveArtistOptions,
   getArtistOptionByStageId,
@@ -123,15 +123,13 @@ async function handleEsperandoArtista(text: string): Promise<HandlerResult> {
 async function handleEsperandoCantidad(
   text: string,
   context: ConversationContext,
-  phoneNumber: string,
 ): Promise<HandlerResult> {
   const quantity = parseQuantity(text);
   if (!quantity) {
     return { reply: messages.cantidadInvalida };
   }
 
-  const stageId = context.stageId!;
-  const stage = await getArtistOptionByStageId(stageId);
+  const stage = await getArtistOptionByStageId(context.stageId!);
   if (!stage) {
     return { reply: messages.errorInesperado, nextState: CONVERSATION_STATES.INICIO };
   }
@@ -140,31 +138,120 @@ async function handleEsperandoCantidad(
     return { reply: messages.stockInsuficiente(stage.stockAvailable) };
   }
 
-  const reserved = await reserveStock(stageId, quantity);
-  if (!reserved) {
-    return { reply: messages.stockInsuficiente(stage.stockAvailable ?? 0) };
-  }
-
-  const order = await createOrder({
-    phoneNumber,
-    artistId: context.artistId!,
-    stageId,
-    quantity,
-    unitPrice: context.unitPrice!,
-  });
-
   return {
-    reply: messages.ordenCreada({
+    reply: messages.confirmarCompra({
       artistName: context.artistName!,
       quantity,
-      totalAmount: order.totalAmount,
-      alias: env.MP_ALIAS,
-      ttlMinutes: env.RESERVATION_TTL_MINUTES,
+      unitPrice: context.unitPrice!,
     }),
-    nextState: CONVERSATION_STATES.ESPERANDO_COMPROBANTE,
+    nextState: CONVERSATION_STATES.ESPERANDO_CONFIRMACION,
     contextPatch: { quantity },
-    activeOrderId: order.id,
   };
+}
+
+async function handleEsperandoConfirmacion(
+  text: string,
+  context: ConversationContext,
+  phoneNumber: string,
+): Promise<HandlerResult> {
+  if (isAffirmative(text)) {
+    const stageId = context.stageId!;
+    const quantity = context.quantity!;
+    const stage = await getArtistOptionByStageId(stageId);
+    if (!stage) {
+      return { reply: messages.errorInesperado, nextState: CONVERSATION_STATES.INICIO };
+    }
+
+    if (stage.stockAvailable !== null && quantity > stage.stockAvailable) {
+      return {
+        reply: messages.stockInsuficiente(stage.stockAvailable),
+        nextState: CONVERSATION_STATES.ESPERANDO_CANTIDAD,
+      };
+    }
+
+    const reserved = await reserveStock(stageId, quantity);
+    if (!reserved) {
+      return {
+        reply: messages.stockInsuficiente(stage.stockAvailable ?? 0),
+        nextState: CONVERSATION_STATES.ESPERANDO_CANTIDAD,
+      };
+    }
+
+    const order = await createOrder({
+      phoneNumber,
+      artistId: context.artistId!,
+      stageId,
+      quantity,
+      unitPrice: context.unitPrice!,
+    });
+
+    return {
+      reply: messages.ordenCreada({
+        artistName: context.artistName!,
+        quantity,
+        totalAmount: order.totalAmount,
+        alias: env.MP_ALIAS,
+        ttlMinutes: env.RESERVATION_TTL_MINUTES,
+      }),
+      nextState: CONVERSATION_STATES.ESPERANDO_COMPROBANTE,
+      activeOrderId: order.id,
+    };
+  }
+
+  // ¿Está corrigiendo el artista? (por nombre o número, igual que en ESPERANDO_ARTISTA)
+  const artists = await getActiveArtistOptions();
+  const chosenArtist = findArtistBySelection(text, artists);
+  if (chosenArtist) {
+    if (chosenArtist.stockAvailable !== null && chosenArtist.stockAvailable <= 0) {
+      return {
+        reply: `${messages.artistaAgotado}\n\n${messages.pedirArtista(artists)}`,
+        nextState: CONVERSATION_STATES.ESPERANDO_ARTISTA,
+      };
+    }
+
+    const artistPatch = {
+      artistId: chosenArtist.artistId,
+      stageId: chosenArtist.stageId,
+      artistName: chosenArtist.artistName,
+      unitPrice: chosenArtist.price,
+    };
+    const quantity = context.quantity!;
+
+    if (chosenArtist.stockAvailable !== null && quantity > chosenArtist.stockAvailable) {
+      return {
+        reply: messages.pedirCantidad(chosenArtist.artistName, chosenArtist.stockAvailable),
+        nextState: CONVERSATION_STATES.ESPERANDO_CANTIDAD,
+        contextPatch: artistPatch,
+      };
+    }
+
+    return {
+      reply: messages.confirmarCompra({ artistName: chosenArtist.artistName, quantity, unitPrice: chosenArtist.price }),
+      contextPatch: artistPatch,
+    };
+  }
+
+  // ¿Está corrigiendo la cantidad?
+  const newQuantity = parseQuantity(text);
+  if (newQuantity) {
+    const stage = await getArtistOptionByStageId(context.stageId!);
+    if (!stage) {
+      return { reply: messages.errorInesperado, nextState: CONVERSATION_STATES.INICIO };
+    }
+    if (stage.stockAvailable !== null && newQuantity > stage.stockAvailable) {
+      return { reply: messages.stockInsuficiente(stage.stockAvailable) };
+    }
+    return {
+      reply: messages.confirmarCompra({
+        artistName: context.artistName!,
+        quantity: newQuantity,
+        unitPrice: context.unitPrice!,
+      }),
+      contextPatch: { quantity: newQuantity },
+    };
+  }
+
+  return { reply: messages.confirmacionNoEntendida };
 }
 
 async function handleEsperandoComprobante(
@@ -247,7 +334,10 @@ export async function handleIncomingMessage(
         result = await handleEsperandoArtista(text);
         break;
       case CONVERSATION_STATES.ESPERANDO_CANTIDAD:
-        result = await handleEsperandoCantidad(text, conversation.context, phoneNumber);
+        result = await handleEsperandoCantidad(text, conversation.context);
+        break;
+      case CONVERSATION_STATES.ESPERANDO_CONFIRMACION:
+        result = await handleEsperandoConfirmacion(text, conversation.context, phoneNumber);
         break;
       case CONVERSATION_STATES.ESPERANDO_COMPROBANTE:
         result = await handleEsperandoComprobante(text, order, mediaId);
