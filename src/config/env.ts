@@ -41,7 +41,7 @@ const envSchema = z.object({
   GMAIL_APP_PASSWORD: optionalString(),
   ADMIN_EMAILS: z.string().default(""),
 
-  RESERVATION_TTL_MINUTES: z.coerce.number().int().positive().default(20),
+  RESERVATION_TTL_MINUTES: z.coerce.number().int().positive().default(5),
   PAYMENT_MATCH_WINDOW_MINUTES: z.coerce.number().int().positive().default(45),
   AMOUNT_DISTINGUISHING_STEP: z.coerce.number().positive().default(0.01),
 

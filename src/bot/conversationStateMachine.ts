@@ -1,4 +1,4 @@
-import { CONVERSATION_STATES } from "../config/constants";
+import { CONVERSATION_STATES, ORDER_STATUS } from "../config/constants";
 import { env } from "../config/env";
 import { messages } from "./messages";
 import {
@@ -51,7 +51,7 @@ async function handleGlobalCommand(
   if (isCancelCommand(text)) {
     if (conversation.activeOrderId) {
       const order = await getOrderById(conversation.activeOrderId);
-      if (order && order.status === "esperando_pago") {
+      if (order && order.status === ORDER_STATUS.ESPERANDO_PAGO) {
         await cancelOrder(order);
       }
     }
