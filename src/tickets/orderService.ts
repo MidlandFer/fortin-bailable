@@ -114,6 +114,19 @@ export async function setComprobanteMediaId(orderId: number, mediaId: string): P
   await pool.query(`UPDATE orders SET comprobante_media_id = $2 WHERE id = $1`, [orderId, mediaId]);
 }
 
+/**
+ * Número de compra de este comprador (1, 2, 3...) contando solo sus compras
+ * pagadas hasta esta orden inclusive. Sirve para diferenciar los QR cuando la
+ * misma persona compra en distintas ocasiones (ej. "-01", "-02").
+ */
+export async function getPurchaseSequenceNumber(phoneNumber: string, orderId: number): Promise<number> {
+  const result = await pool.query<{ count: string }>(
+    `SELECT count(*) FROM orders WHERE phone_number = $1 AND status = $2 AND id <= $3`,
+    [phoneNumber, ORDER_STATUS.PAGO_CONFIRMADO, orderId],
+  );
+  return Number(result.rows[0]?.count ?? 1);
+}
+
 export async function setBuyerCuitCuil(orderId: number, cuitCuil: string): Promise<void> {
   await pool.query(`UPDATE orders SET buyer_cuit_cuil = $2 WHERE id = $1`, [orderId, cuitCuil]);
 }
