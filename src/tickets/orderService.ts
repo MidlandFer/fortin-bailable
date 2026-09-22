@@ -199,6 +199,21 @@ export async function confirmOrderWithPayment(
   }
 }
 
+/**
+ * Confirma el pago sin corroborarlo contra Mercado Pago. Se usa como fallback
+ * mientras no haya un MERCADOPAGO_ACCESS_TOKEN real configurado (última etapa
+ * de pruebas antes de ir a producción con pagos reales) — ver handleEsperandoComprobante.
+ */
+export async function markOrderPaidMock(orderId: number): Promise<Order> {
+  const result = await pool.query<OrderRow>(
+    `UPDATE orders SET status = $2, paid_at = now() WHERE id = $1 RETURNING *`,
+    [orderId, ORDER_STATUS.PAGO_CONFIRMADO],
+  );
+  const order = mapOrder(result.rows[0]!);
+  await confirmStockSale(order.stageId, order.quantity);
+  return order;
+}
+
 export async function cancelOrder(order: Order): Promise<void> {
   await pool.query(`UPDATE orders SET status = $2 WHERE id = $1`, [
     order.id,

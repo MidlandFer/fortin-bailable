@@ -21,6 +21,7 @@ import {
   setBuyerDni,
   setComprobanteMediaId,
   confirmOrderWithPayment,
+  markOrderPaidMock,
   cancelOrder,
   type Order,
 } from "../tickets/orderService";
@@ -272,6 +273,17 @@ async function handleEsperandoComprobante(
   }
 
   if (avisoDeTransferencia) {
+    // Sin MERCADOPAGO_ACCESS_TOKEN configurado (todavía no se cargó el real de
+    // producción), confirmamos el pago sin corroborarlo. En cuanto se cargue el
+    // token, esta rama deja de usarse sola y pasa a validar contra Mercado Pago.
+    if (!env.MERCADOPAGO_ACCESS_TOKEN) {
+      await markOrderPaidMock(order.id);
+      return {
+        reply: messages.pagoConfirmadoPedirDatos,
+        nextState: CONVERSATION_STATES.ESPERANDO_DATOS_PERSONALES,
+      };
+    }
+
     const payment = await findApprovedPaymentForOrder(order);
     if (!payment) return { reply: messages.pagoNoEncontrado };
 
