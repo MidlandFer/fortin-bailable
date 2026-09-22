@@ -20,11 +20,12 @@ import {
   setBuyerName,
   setBuyerDni,
   setComprobanteMediaId,
-  markOrderPaidMock,
+  confirmOrderWithPayment,
   cancelOrder,
   type Order,
 } from "../tickets/orderService";
 import { generateAndSendTicketsForOrder } from "../tickets/ticketService";
+import { findApprovedPaymentForOrder } from "../payments/mercadoPagoService";
 
 interface HandlerResult {
   reply: string;
@@ -271,9 +272,12 @@ async function handleEsperandoComprobante(
   }
 
   if (avisoDeTransferencia) {
-    // TODO (Fase 4): reemplazar por la verificación real contra Mercado Pago.
-    // Por ahora confirmamos el pago apenas llega el comprobante o el aviso (mock de Fase 3).
-    await markOrderPaidMock(order.id);
+    const payment = await findApprovedPaymentForOrder(order);
+    if (!payment) return { reply: messages.pagoNoEncontrado };
+
+    const confirmed = await confirmOrderWithPayment(order.id, payment);
+    if (!confirmed) return { reply: messages.pagoNoEncontrado };
+
     return {
       reply: messages.pagoConfirmadoPedirDatos,
       nextState: CONVERSATION_STATES.ESPERANDO_DATOS_PERSONALES,

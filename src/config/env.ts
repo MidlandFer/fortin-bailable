@@ -24,6 +24,17 @@ const envSchema = z.object({
   WHATSAPP_BUSINESS_ACCOUNT_ID: optionalString(),
   WHATSAPP_VERIFY_TOKEN: optionalString(),
   WHATSAPP_APP_SECRET: optionalString(),
+  // Número público del bot (el que la gente ve en WhatsApp), en formato wa.me:
+  // solo dígitos, con código de país, sin "+". Se usa para armar el link
+  // "click to chat" que se codifica dentro del QR de cada entrada. Si no está
+  // configurado, el QR cae al texto plano del payload (requiere pegarlo a mano).
+  WHATSAPP_BOT_PHONE_NUMBER: optionalString(),
+  // Números de WhatsApp de los verificadores de puerta (separados por coma), en
+  // el mismo formato en que llegan en "message.from" del webhook: solo dígitos,
+  // con código de país, sin "+" ni espacios. Cuando uno de estos números escribe
+  // al bot, el texto se trata como un código de QR escaneado en la entrada en
+  // vez de como un mensaje de compra.
+  VERIFIER_PHONE_NUMBERS: z.string().default(""),
 
   MERCADOPAGO_ACCESS_TOKEN: optionalString(),
   MERCADOPAGO_WEBHOOK_SECRET: optionalString(),
@@ -59,4 +70,7 @@ if (!parsed.success) {
 export const env = {
   ...parsed.data,
   adminEmails: parsed.data.ADMIN_EMAILS.split(",").map((e) => e.trim()).filter(Boolean),
+  verifierPhoneNumbers: parsed.data.VERIFIER_PHONE_NUMBERS.split(",")
+    .map((p) => p.trim())
+    .filter(Boolean),
 };

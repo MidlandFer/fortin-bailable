@@ -1,4 +1,0 @@
-{
-  "migrations-dir": "src/db/migrations",
-  "migration-file-language": "sql"
-}

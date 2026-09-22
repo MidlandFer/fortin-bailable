@@ -1,4 +1,5 @@
 import type { ArtistOption } from "../tickets/stockService";
+import type { ScannedTicketInfo } from "../tickets/verifierService";
 
 function formatMoney(amount: number): string {
   return amount.toLocaleString("es-AR", { style: "currency", currency: "ARS" });
@@ -67,6 +68,10 @@ export const messages = {
 
   verificandoPago: "Dale 👀, estamos revisando la transferencia. Puede tardar unos minutos, ya te aviso.",
 
+  pagoNoEncontrado:
+    "Todavía no encontramos una transferencia aprobada por el monto exacto 🧐. " +
+    "Revisá que hayas transferido el importe indicado y volvé a mandar el comprobante o escribir *ya transferí*.",
+
   pagoConfirmadoPedirDatos:
     "¡Recibimos tu pago! ✅ Ahora pasame tu *nombre y apellido completo* junto con tu *DNI* " +
     "en un solo mensaje, para generar tu entrada con QR.\n\nEjemplo: _Ezequiel Collado 29959999_",
@@ -86,4 +91,20 @@ export const messages = {
     "Puedo ayudarte a comprar entradas para el Fortín Bailable 🎟️. Escribime cualquier cosa para ver las entradas disponibles, o *cancelar* para cortar una compra en curso.",
 
   errorInesperado: "Uh 😅, tuvimos un problema de nuestro lado. Probá de nuevo en un rato, disculpá.",
+
+  qrValido: (ticket: ScannedTicketInfo) =>
+    `✅ ENTRADA VÁLIDA — ingreso autorizado\n` +
+    `${ticket.artistName} — N° ${String(ticket.ticketNumber).padStart(5, "0")}` +
+    (ticket.buyerName
+      ? `\nTitular: ${ticket.buyerName}${ticket.buyerDni ? ` (DNI ${ticket.buyerDni})` : ""}`
+      : ""),
+
+  qrYaUsado: (ticket: ScannedTicketInfo) =>
+    `⛔ ENTRADA YA USADA — no dejar pasar\n` +
+    `${ticket.artistName} — N° ${String(ticket.ticketNumber).padStart(5, "0")}` +
+    (ticket.usedAt ? `\nYa había ingresado el ${ticket.usedAt.toLocaleString("es-AR")}.` : ""),
+
+  qrInvalido: "⛔ CÓDIGO INVÁLIDO — no corresponde a una entrada del evento. No dejar pasar.",
+
+  qrNoEncontrado: "⛔ CÓDIGO NO ENCONTRADO — no existe esa entrada. No dejar pasar.",
 };

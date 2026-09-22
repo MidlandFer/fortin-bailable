@@ -5,7 +5,9 @@ import { env } from "../config/env";
 import { markAsRead, sendText } from "./client";
 import type { WhatsAppWebhookPayload } from "./types";
 import { handleIncomingMessage } from "../bot/conversationStateMachine";
+import { handleVerifierScan } from "../bot/verifierBot";
 import { messages } from "../bot/messages";
+import { isVerifierPhone } from "../tickets/verifierService";
 
 function verifySignature(req: Request): boolean {
   if (!env.WHATSAPP_APP_SECRET) return false;
@@ -85,7 +87,16 @@ export function createWhatsAppWebhookRouter(): Router {
 
           if (message.type === "text" && message.text) {
             console.log(`Mensaje de ${message.from}: ${message.text.body}`);
-            await processAndReply(message.from, message.text.body);
+            if (isVerifierPhone(message.from)) {
+              try {
+                const reply = await handleVerifierScan(message.from, message.text.body);
+                await sendText(message.from, reply);
+              } catch (err) {
+                console.error("Error al procesar un escaneo de verificador:", err);
+              }
+            } else {
+              await processAndReply(message.from, message.text.body);
+            }
           } else if (message.type === "image" && message.image) {
             console.log(`Imagen recibida de ${message.from} (media id: ${message.image.id})`);
             await processAndReply(message.from, "", message.image.id);

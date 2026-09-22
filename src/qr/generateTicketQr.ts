@@ -29,11 +29,23 @@ export function buildQrPayload(
   return `${ticketId}.${ticketNumber}.${issuedAtEpochSeconds}.${signature}`;
 }
 
+/**
+ * Si hay un número de WhatsApp del bot configurado, envuelve el payload en un
+ * link "click to chat" (wa.me) con el texto precargado: al escanear el QR con
+ * la cámara, el celular abre WhatsApp directo con el bot y el mensaje ya
+ * escrito, listo para tocar "Enviar". Sin ese número configurado, el QR
+ * codifica el payload en texto plano (hay que pegarlo a mano en el chat).
+ */
+function buildQrContent(payload: string): string {
+  if (!env.WHATSAPP_BOT_PHONE_NUMBER) return payload;
+  return `https://wa.me/${env.WHATSAPP_BOT_PHONE_NUMBER}?text=${encodeURIComponent(payload)}`;
+}
+
 export async function generateTicketQrPng(
   ticketId: string,
   ticketNumber: number,
   issuedAtEpochSeconds: number,
 ): Promise<Buffer> {
   const payload = buildQrPayload(ticketId, ticketNumber, issuedAtEpochSeconds);
-  return QRCode.toBuffer(payload, { type: "png", width: 512, margin: 2 });
+  return QRCode.toBuffer(buildQrContent(payload), { type: "png", width: 512, margin: 2 });
 }

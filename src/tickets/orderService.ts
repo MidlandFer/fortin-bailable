@@ -2,6 +2,7 @@ import { pool } from "../db/pool";
 import { env } from "../config/env";
 import { ORDER_STATUS } from "../config/constants";
 import { releaseStock, confirmStockSale } from "./stockService";
+import type { MatchingPayment } from "../payments/mercadoPagoService";
 
 export interface Order {
   id: number;
@@ -131,20 +132,71 @@ export async function setBuyerCuitCuil(orderId: number, cuitCuil: string): Promi
   await pool.query(`UPDATE orders SET buyer_cuit_cuil = $2 WHERE id = $1`, [orderId, cuitCuil]);
 }
 
-/**
- * Marca la orden como pagada. TODO (Fase 4): reemplazar por la verificación real
- * contra la API de Mercado Pago (matcher por monto + ventana de tiempo). Por ahora,
- * dispara la confirmación en cuanto el usuario escribe "ya transferí" (mock explícito
- * de la Fase 3, sin corroborar el pago real).
- */
-export async function markOrderPaidMock(orderId: number): Promise<Order> {
-  const result = await pool.query<OrderRow>(
-    `UPDATE orders SET status = $2, paid_at = now() WHERE id = $1 RETURNING *`,
-    [orderId, ORDER_STATUS.PAGO_CONFIRMADO],
-  );
-  const order = mapOrder(result.rows[0]!);
-  await confirmStockSale(order.stageId, order.quantity);
-  return order;
+export async function confirmOrderWithPayment(
+  orderId: number,
+  payment: MatchingPayment,
+): Promise<Order | null> {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const orderResult = await client.query<OrderRow>(
+      `SELECT * FROM orders WHERE id = $1 AND status = $2 FOR UPDATE`,
+      [orderId, ORDER_STATUS.ESPERANDO_PAGO],
+    );
+    const row = orderResult.rows[0];
+    if (!row) {
+      await client.query("ROLLBACK");
+      return null;
+    }
+
+    const existingPayment = await client.query<{ id: number; matched_order_id: number | null }>(
+      `SELECT id, matched_order_id FROM mp_payments WHERE mp_payment_id = $1 FOR UPDATE`,
+      [payment.paymentId],
+    );
+    const matchedOrderId = existingPayment.rows[0]?.matched_order_id;
+    if (matchedOrderId !== undefined && matchedOrderId !== null && matchedOrderId !== orderId) {
+      await client.query("ROLLBACK");
+      return null;
+    }
+
+    const paymentResult = existingPayment.rows[0]
+      ? existingPayment
+      : await client.query<{ id: number }>(
+          `INSERT INTO mp_payments
+             (mp_payment_id, raw_payload, transaction_amount, date_created,
+              payer_identification, matched_order_id, matched_at, match_method, status)
+           VALUES ($1, $2, $3, $4, $5, $6, now(), 'auto', 'confirmado')
+           RETURNING id`,
+          [
+            payment.paymentId,
+            JSON.stringify(payment.rawPayload),
+            payment.transactionAmount,
+            payment.dateCreated,
+            payment.payerIdentification ? JSON.stringify(payment.payerIdentification) : null,
+            orderId,
+          ],
+        );
+
+    const updated = await client.query<OrderRow>(
+      `UPDATE orders
+       SET status = $2, paid_at = now(), mp_payment_id = $3
+       WHERE id = $1 AND status = $4
+       RETURNING *`,
+      [orderId, ORDER_STATUS.PAGO_CONFIRMADO, paymentResult.rows[0]!.id, ORDER_STATUS.ESPERANDO_PAGO],
+    );
+    await client.query("COMMIT");
+
+    const confirmed = updated.rows[0];
+    if (!confirmed) return null;
+    const order = mapOrder(confirmed);
+    await confirmStockSale(order.stageId, order.quantity);
+    return order;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 export async function cancelOrder(order: Order): Promise<void> {

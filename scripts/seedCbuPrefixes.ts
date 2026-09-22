@@ -1,5 +1,5 @@
 // Carga (opcional) del padrón completo de entidades financieras del BCRA.
-// La migración 002_seed_cbu_prefixes.sql ya carga un puñado de bancos conocidos
+// La migración 1789841360000_seed_cbu_prefixes.sql ya carga un puñado de bancos conocidos
 // como placeholder. Para completar la tabla con el padrón oficial:
 //   1. Descargar el listado de entidades financieras desde https://www.bcra.gob.ar
 //      (sección "Entidades financieras" / códigos de entidad usados en CBU/CVU).
