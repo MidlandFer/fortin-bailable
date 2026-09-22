@@ -2,6 +2,13 @@ import { pool } from "../db/pool";
 import { TICKET_STATUS } from "../config/constants";
 import { getPurchaseSequenceNumber, type Order } from "./orderService";
 import { buildQrPayload, generateTicketQrPng, signTicketPayload } from "../qr/generateTicketQr";
+
+function formatTicketNumber(rawSerial: number): { displayNumber: number; padded: string } {
+  // La SERIAL de Postgres arranca en 1; se resta 1 para que la primera
+  // entrada emitida en todo el sistema se muestre como "00000".
+  const displayNumber = rawSerial - 1;
+  return { displayNumber, padded: String(displayNumber).padStart(5, "0") };
+}
 import { uploadMedia, sendImageByMediaId } from "../whatsapp/client";
 
 function formatFecha(date: Date): string {
@@ -39,13 +46,16 @@ export async function generateAndSendTicketsForOrder(order: Order, artistName: s
     const ticketEpochSeconds = baseEpochSeconds + (i - 1);
     const ticketIssuedAt = new Date(ticketEpochSeconds * 1000);
 
-    const inserted = await pool.query<{ id: string }>(
-      `INSERT INTO tickets (order_id, unit_index, status) VALUES ($1, $2, $3) RETURNING id`,
+    const inserted = await pool.query<{ id: string; ticket_number: number }>(
+      `INSERT INTO tickets (order_id, unit_index, status) VALUES ($1, $2, $3) RETURNING id, ticket_number`,
       [order.id, i, TICKET_STATUS.PENDIENTE],
     );
     const ticketId = inserted.rows[0]!.id;
-    const qrPayload = buildQrPayload(ticketId, ticketEpochSeconds);
-    const signature = signTicketPayload(ticketId, ticketEpochSeconds);
+    const { displayNumber: ticketNumber, padded: ticketNumberPadded } = formatTicketNumber(
+      inserted.rows[0]!.ticket_number,
+    );
+    const qrPayload = buildQrPayload(ticketId, ticketNumber, ticketEpochSeconds);
+    const signature = signTicketPayload(ticketId, ticketNumber, ticketEpochSeconds);
 
     await pool.query(
       `UPDATE tickets
@@ -54,10 +64,11 @@ export async function generateAndSendTicketsForOrder(order: Order, artistName: s
       [ticketId, qrPayload, signature, TICKET_STATUS.GENERADO, ticketEpochSeconds],
     );
 
-    const pngBuffer = await generateTicketQrPng(ticketId, ticketEpochSeconds);
-    const mediaId = await uploadMedia(pngBuffer, "image/png", `entrada-${purchaseSeqPadded}-${i}.png`);
+    const pngBuffer = await generateTicketQrPng(ticketId, ticketNumber, ticketEpochSeconds);
+    const mediaId = await uploadMedia(pngBuffer, "image/png", `entrada-${ticketNumberPadded}.png`);
     const caption =
       `🎟️ Entrada -${purchaseSeqPadded}/${i} de ${order.quantity} — ${artistName}\n` +
+      `🔢 N° de entrada: ${ticketNumberPadded}\n` +
       `🪪 DNI: ${order.buyerDni}\n` +
       `🗓️ ${formatFecha(ticketIssuedAt)}\n` +
       `Presentá este QR junto a tu DNI en el ingreso.`;
