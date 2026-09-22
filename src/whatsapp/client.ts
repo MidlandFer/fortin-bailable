@@ -65,6 +65,21 @@ export async function sendImageByMediaId(to: string, mediaId: string, caption?: 
   );
 }
 
+/** Descarga un media de WhatsApp (foto, documento, etc.) a partir de su media id. */
+export async function downloadMedia(mediaId: string): Promise<Buffer> {
+  const { token } = requireConfig();
+
+  const metadata = await axios.get<{ url: string }>(graphUrl(mediaId), {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  const file = await axios.get<ArrayBuffer>(metadata.data.url, {
+    headers: { Authorization: `Bearer ${token}` },
+    responseType: "arraybuffer",
+  });
+  return Buffer.from(file.data);
+}
+
 export async function markAsRead(messageId: string) {
   const { token, phoneNumberId } = requireConfig();
 

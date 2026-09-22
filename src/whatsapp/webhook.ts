@@ -2,12 +2,13 @@ import crypto from "node:crypto";
 import type { Request, Response, Router } from "express";
 import { Router as createRouter } from "express";
 import { env } from "../config/env";
-import { markAsRead, sendText } from "./client";
+import { downloadMedia, markAsRead, sendText } from "./client";
 import type { WhatsAppWebhookPayload } from "./types";
 import { handleIncomingMessage } from "../bot/conversationStateMachine";
 import { handleVerifierScan } from "../bot/verifierBot";
 import { messages } from "../bot/messages";
 import { isVerifierPhone } from "../tickets/verifierService";
+import { decodeQrFromImage } from "../qr/decodeQrImage";
 
 function verifySignature(req: Request): boolean {
   if (!env.WHATSAPP_APP_SECRET) return false;
@@ -75,6 +76,20 @@ export function createWhatsAppWebhookRouter(): Router {
       }
     };
 
+    const processVerifierScan = async (from: string, text: string) => {
+      try {
+        const reply = await handleVerifierScan(from, text);
+        await sendText(from, reply);
+      } catch (err) {
+        console.error("Error al procesar un escaneo de verificador:", err);
+        try {
+          await sendText(from, messages.errorInesperado);
+        } catch (sendErr) {
+          console.error("Error al avisar del error por WhatsApp:", sendErr);
+        }
+      }
+    };
+
     for (const entry of payload.entry ?? []) {
       for (const change of entry.changes ?? []) {
         const inboundMessages = change.value.messages ?? [];
@@ -88,18 +103,32 @@ export function createWhatsAppWebhookRouter(): Router {
           if (message.type === "text" && message.text) {
             console.log(`Mensaje de ${message.from}: ${message.text.body}`);
             if (isVerifierPhone(message.from)) {
-              try {
-                const reply = await handleVerifierScan(message.from, message.text.body);
-                await sendText(message.from, reply);
-              } catch (err) {
-                console.error("Error al procesar un escaneo de verificador:", err);
-              }
+              await processVerifierScan(message.from, message.text.body);
             } else {
               await processAndReply(message.from, message.text.body);
             }
           } else if (message.type === "image" && message.image) {
             console.log(`Imagen recibida de ${message.from} (media id: ${message.image.id})`);
-            await processAndReply(message.from, "", message.image.id);
+            if (isVerifierPhone(message.from)) {
+              try {
+                const buffer = await downloadMedia(message.image.id);
+                const decoded = await decodeQrFromImage(buffer);
+                if (!decoded) {
+                  await sendText(message.from, messages.qrImagenIlegible);
+                } else {
+                  await processVerifierScan(message.from, decoded);
+                }
+              } catch (err) {
+                console.error("Error al leer el QR de una imagen de verificador:", err);
+                try {
+                  await sendText(message.from, messages.errorInesperado);
+                } catch (sendErr) {
+                  console.error("Error al avisar del error por WhatsApp:", sendErr);
+                }
+              }
+            } else {
+              await processAndReply(message.from, "", message.image.id);
+            }
           } else if (message.type === "document" && message.document) {
             // Cubre el botón "Compartir comprobante" de Mercado Pago y similares,
             // que a veces mandan el comprobante como documento/PDF en vez de foto.

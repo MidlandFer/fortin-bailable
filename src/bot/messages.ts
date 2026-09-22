@@ -107,4 +107,8 @@ export const messages = {
   qrInvalido: "⛔ CÓDIGO INVÁLIDO — no corresponde a una entrada del evento. No dejar pasar.",
 
   qrNoEncontrado: "⛔ CÓDIGO NO ENCONTRADO — no existe esa entrada. No dejar pasar.",
+
+  qrImagenIlegible:
+    "No pude leer ningún código QR en esa imagen 🧐. Probá con una foto más nítida y bien enfocada, " +
+    "o mandame directamente el texto del código.",
 };
