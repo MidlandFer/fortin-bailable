@@ -1,9 +1,39 @@
 import type { ArtistOption } from "../tickets/stockService";
 import type { ScannedTicketInfo } from "../tickets/verifierService";
+import type { ArtistMenuOption, ArtistReport, GeneralReportRow } from "../admin/reportService";
 
 function formatMoney(amount: number): string {
   return amount.toLocaleString("es-AR", { style: "currency", currency: "ARS" });
 }
+
+function formatFechaHora(date: Date): string {
+  return date.toLocaleString("es-AR", {
+    timeZone: "America/Argentina/Buenos_Aires",
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+const STAGE_TYPE_LABEL: Record<string, string> = {
+  general: "Entrada general",
+  preventa: "Preventa",
+};
+
+const MAX_TRANSFERENCIAS_DETALLADAS = 50;
+
+function adminMenuOpciones(artists: ArtistMenuOption[]): string {
+  return (
+    `0. Resumen general (todos los artistas)\n` +
+    artists.map((a, i) => `${i + 1}. ${a.artistName}`).join("\n")
+  );
+}
+
+const ADMIN_FOOTER_MAIL =
+  "Para recibirlo por mail, escribí *informe final <artista>* o *reporte final <artista>*.";
+
+const ADMIN_FOOTER_NAVEGACION = `Escribí otro número para ver otro artista, o *salir* para cerrar sesión.\n${ADMIN_FOOTER_MAIL}`;
 
 function artistListText(artists: ArtistOption[]): string {
   return artists
@@ -111,4 +141,80 @@ export const messages = {
   qrImagenIlegible:
     "No pude leer ningún código QR en esa imagen 🧐. Probá con una foto más nítida y bien enfocada, " +
     "o mandame directamente el texto del código.",
+
+  adminPedirPalabraClave: "Escribí *informe* o *resumen* para ver el reporte de ventas.",
+
+  adminPedirContrasena: "🔐 Ingresá la contraseña de administrador para acceder a los reportes de venta.",
+
+  adminContrasenaIncorrecta: "❌ Contraseña incorrecta. Probá de nuevo.",
+
+  adminMenu: (artists: ArtistMenuOption[]) =>
+    `✅ Acceso concedido. ¿Qué querés ver?\n\n${adminMenuOpciones(artists)}\n\n` +
+    `Respondé con un número, o escribí *salir* para cerrar sesión.\n${ADMIN_FOOTER_MAIL}`,
+
+  adminOpcionInvalida: (artists: ArtistMenuOption[]) =>
+    `No entendí esa opción 🤔. Elegí un número:\n\n${adminMenuOpciones(artists)}`,
+
+  adminSesionCerrada: "Sesión cerrada 🔒. Escribí *informe* o *resumen* cuando quieras volver a entrar.",
+
+  adminSinArtistas: "Todavía no hay artistas cargados en el sistema.",
+
+  adminSoloTexto:
+    "En el modo administrador solo puedo leer texto 🧐. Escribí *informe* o *resumen* para empezar.",
+
+  adminBloqueado: (minutesRemaining: number) =>
+    `🔒 Demasiadas contraseñas incorrectas. Probá de nuevo en ${minutesRemaining} minuto(s).`,
+
+  adminMailEnviado: (artistName: string, recipients: string[]) =>
+    `📧 Te mandé el reporte de *${artistName}* por mail a: ${recipients.join(", ")}.`,
+
+  adminMailNoConfigurado:
+    "No pude mandar el mail: todavía falta configurar el envío (GMAIL_USER, GMAIL_APP_PASSWORD o ADMIN_EMAILS).",
+
+  adminArtistaNoEncontradoParaMail: (query: string, artists: ArtistMenuOption[]) =>
+    `No encontré ningún artista que coincida con "${query}" 🤔. Elegí uno de estos:\n\n` +
+    artists.map((a, i) => `${i + 1}. ${a.artistName}`).join("\n"),
+
+  adminResumenGeneral: (rows: GeneralReportRow[]) => {
+    if (rows.length === 0) return "Todavía no hay artistas cargados en el sistema.";
+
+    const lineas = rows.map(
+      (r) => `• *${r.artistName}*: ${r.ticketsSold} entrada(s) — ${formatMoney(r.totalAmount)}`,
+    );
+    const totalEntradas = rows.reduce((sum, r) => sum + r.ticketsSold, 0);
+    const totalMonto = rows.reduce((sum, r) => sum + r.totalAmount, 0);
+
+    return (
+      `📊 *Resumen general*\n\n${lineas.join("\n")}\n\n` +
+      `*Total: ${totalEntradas} entrada(s) — ${formatMoney(totalMonto)}*\n\n${ADMIN_FOOTER_NAVEGACION}`
+    );
+  },
+
+  adminResumenArtista: (report: ArtistReport) => {
+    if (report.breakdown.length === 0) {
+      return (
+        `📊 *${report.artistName}*\n\nTodavía no tiene ninguna transferencia confirmada.\n\n` +
+        ADMIN_FOOTER_NAVEGACION
+      );
+    }
+
+    const secciones = report.breakdown.map((s) => {
+      const etiqueta = STAGE_TYPE_LABEL[s.stageType] ?? s.stageType;
+      const detalle = s.transfers
+        .slice(0, MAX_TRANSFERENCIAS_DETALLADAS)
+        .map((t) => `   ${formatFechaHora(t.paidAt)} — ${formatMoney(t.amount)}`)
+        .join("\n");
+      const restantes = s.transfers.length - MAX_TRANSFERENCIAS_DETALLADAS;
+      const nota = restantes > 0 ? `\n   (+${restantes} transferencia(s) más)` : "";
+
+      return (
+        `*${etiqueta}*: ${s.ticketsSold} entrada(s) — ${formatMoney(s.totalAmount)}\n${detalle}${nota}`
+      );
+    });
+
+    return (
+      `📊 *${report.artistName}*\n\n${secciones.join("\n\n")}\n\n` +
+      `*Total: ${report.totalTicketsSold} entrada(s) — ${formatMoney(report.totalAmount)}*\n\n${ADMIN_FOOTER_NAVEGACION}`
+    );
+  },
 };

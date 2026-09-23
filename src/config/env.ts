@@ -53,6 +53,9 @@ const envSchema = z.object({
   ADMIN_EMAILS: z.string().default(""),
 
   RESERVATION_TTL_MINUTES: z.coerce.number().int().positive().default(5),
+  // Tras ingresar la contraseña, un admin de reportes queda logueado en su
+  // conversación de WhatsApp hasta que pasen tantos minutos sin consultar nada.
+  REPORT_ADMIN_SESSION_IDLE_MINUTES: z.coerce.number().int().positive().default(15),
   PAYMENT_MATCH_WINDOW_MINUTES: z.coerce.number().int().positive().default(45),
   AMOUNT_DISTINGUISHING_STEP: z.coerce.number().positive().default(0.01),
 

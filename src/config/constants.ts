@@ -38,4 +38,16 @@ export const SCAN_RESULT = {
 
 export type ScanResult = (typeof SCAN_RESULT)[keyof typeof SCAN_RESULT];
 
+export const STAGE_TYPE = {
+  GENERAL: "general",
+  PREVENTA: "preventa",
+} as const;
+
+export type StageType = (typeof STAGE_TYPE)[keyof typeof STAGE_TYPE];
+
 export const MAX_RETRIES_RESPUESTA_AMBIGUA = 3;
+
+// Tras esta cantidad de contraseñas incorrectas seguidas, un admin de reportes
+// queda bloqueado por REPORT_ADMIN_LOCKOUT_MINUTES antes de poder reintentar.
+export const REPORT_ADMIN_MAX_FAILED_ATTEMPTS = 5;
+export const REPORT_ADMIN_LOCKOUT_MINUTES = 15;

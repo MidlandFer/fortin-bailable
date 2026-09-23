@@ -6,8 +6,10 @@ import { downloadMedia, markAsRead, sendText } from "./client";
 import type { WhatsAppWebhookPayload } from "./types";
 import { handleIncomingMessage } from "../bot/conversationStateMachine";
 import { handleVerifierScan } from "../bot/verifierBot";
+import { handleReportAdminMessage } from "../bot/reportAdminBot";
 import { messages } from "../bot/messages";
 import { isVerifierPhone } from "../tickets/verifierService";
+import { isReportAdminPhone } from "../admin/reportAdminService";
 import { decodeQrFromImage } from "../qr/decodeQrImage";
 
 function verifySignature(req: Request): boolean {
@@ -90,6 +92,20 @@ export function createWhatsAppWebhookRouter(): Router {
       }
     };
 
+    const processReportAdmin = async (from: string, text: string) => {
+      try {
+        const reply = await handleReportAdminMessage(from, text);
+        await sendText(from, reply);
+      } catch (err) {
+        console.error("Error al procesar un mensaje de admin de reportes:", err);
+        try {
+          await sendText(from, messages.errorInesperado);
+        } catch (sendErr) {
+          console.error("Error al avisar del error por WhatsApp:", sendErr);
+        }
+      }
+    };
+
     for (const entry of payload.entry ?? []) {
       for (const change of entry.changes ?? []) {
         const inboundMessages = change.value.messages ?? [];
@@ -100,16 +116,22 @@ export function createWhatsAppWebhookRouter(): Router {
             console.error("No se pudo marcar el mensaje como leído:", err);
           }
 
+          const isFromReportAdmin = await isReportAdminPhone(message.from);
+
           if (message.type === "text" && message.text) {
             console.log(`Mensaje de ${message.from}: ${message.text.body}`);
-            if (isVerifierPhone(message.from)) {
+            if (isFromReportAdmin) {
+              await processReportAdmin(message.from, message.text.body);
+            } else if (isVerifierPhone(message.from)) {
               await processVerifierScan(message.from, message.text.body);
             } else {
               await processAndReply(message.from, message.text.body);
             }
           } else if (message.type === "image" && message.image) {
             console.log(`Imagen recibida de ${message.from} (media id: ${message.image.id})`);
-            if (isVerifierPhone(message.from)) {
+            if (isFromReportAdmin) {
+              await sendText(message.from, messages.adminSoloTexto);
+            } else if (isVerifierPhone(message.from)) {
               try {
                 const buffer = await downloadMedia(message.image.id);
                 const decoded = await decodeQrFromImage(buffer);
@@ -133,7 +155,11 @@ export function createWhatsAppWebhookRouter(): Router {
             // Cubre el botón "Compartir comprobante" de Mercado Pago y similares,
             // que a veces mandan el comprobante como documento/PDF en vez de foto.
             console.log(`Documento recibido de ${message.from} (media id: ${message.document.id})`);
-            await processAndReply(message.from, "", message.document.id);
+            if (isFromReportAdmin) {
+              await sendText(message.from, messages.adminSoloTexto);
+            } else {
+              await processAndReply(message.from, "", message.document.id);
+            }
           }
         }
       }

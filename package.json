@@ -15,7 +15,7 @@
     "migrate:up": "node-pg-migrate up --migrations-dir src/db/migrations --migration-file-language sql",
     "migrate:down": "node-pg-migrate down --migrations-dir src/db/migrations --migration-file-language sql",
     "seed:admin": "tsx scripts/seedAdmin.ts",
-    "seed:cbu": "tsx scripts/seedCbuPrefixes.ts",
+    "seed:report-admins": "tsx scripts/seedReportAdmins.ts",
     "lint": "eslint . --ext .ts",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit"

@@ -9,10 +9,14 @@ Ver el plan completo de arquitectura y roadmap en
 
 ## Estado actual
 
-**Fase 1 y Fase 2 completas** (esqueleto, esquema de base de datos, healthcheck,
-webhook de WhatsApp Cloud API funcionando de punta a punta con eco simple) **y
-Fase 9 adelantada parcialmente** (infraestructura de hosting ya operativa,
-aunque el resto de las fases del roadmap todavía no está implementado).
+Implementado y probado: venta de entradas por WhatsApp (por artista, con
+preventa y stock), emisión de entradas con QR firmado, control de acceso por
+WhatsApp (verificadores que escanean/mandan el QR), y el bot de admins de
+reportes de venta (con envío del reporte por mail a pedido). El auto-deploy a
+Coolify está armado pero sin activar (ver más abajo). **Lo único que falta
+para estar 100% en producción es Mercado Pago real** (hoy corre en modo mock:
+confirma el pago sin corroborarlo, porque no hay `MERCADOPAGO_ACCESS_TOKEN` de
+producción cargado todavía).
 
 ### WhatsApp Cloud API — estado
 
@@ -55,13 +59,12 @@ que usar un subdominio *distinto* (ej. `bot`, `admin`, `scanner`) — asignarle
 el mismo dominio que Coolify genera un conflicto de ruteo en Traefik.
 
 El deploy no es automático todavía: cada `git push` requiere disparar un
-nuevo deploy manualmente (por la API de Coolify o desde su panel). Configurar
-el webhook de auto-deploy queda pendiente para cuando se retome la Fase 9
-formalmente.
+nuevo deploy manualmente (por la API de Coolify o desde su panel), salvo que
+actives el workflow de auto-deploy ya armado — ver la sección "Auto-deploy"
+más abajo.
 
-Las fases siguientes del roadmap (bot de WhatsApp, Mercado Pago, capa de IA,
-panel admin, PWA de escaneo, reportes) todavía no están implementadas y se
-van a ir agregando de forma incremental.
+La capa de IA (Anthropic) no está implementada; `ANTHROPIC_API_KEY` queda
+cargada en el `.env` para cuando se defina qué uso puntual se le va a dar.
 
 ## Requisitos
 
@@ -95,10 +98,6 @@ npm run migrate:up
 # Crear el primer usuario admin (usa ADMIN_SEED_EMAIL / ADMIN_SEED_PASSWORD del .env)
 npm run seed:admin
 
-# (Opcional) completar la tabla de prefijos de CBU con el padrón del BCRA
-# ver el comentario en scripts/seedCbuPrefixes.ts
-npm run seed:cbu
-
 # Levantar el servidor en modo desarrollo
 npm run dev
 ```
@@ -113,18 +112,83 @@ migraciones se hayan corrido.
 - `npm run build` / `npm start` — build de producción
 - `npm run migrate:up` / `npm run migrate:down` — migraciones de base de datos
 - `npm run seed:admin` — crea/actualiza el usuario admin inicial
-- `npm run seed:cbu` — carga el padrón de prefijos CBU/CVU desde `data/cbu_prefixes.csv`
+- `npm run seed:report-admins` — carga/actualiza las contraseñas de los 3
+  números de WhatsApp habilitados como admins de reportes de venta (completar
+  `REPORT_ADMIN_PASSWORD_1/2/3` en el `.env` antes de correrlo)
 - `npm run lint` / `npm run typecheck` — chequeos de calidad de código
+
+## Reportes de venta por WhatsApp (admins)
+
+Los 3 números de WhatsApp cargados en `report_admins` (ver
+`scripts/seedReportAdmins.ts`) pueden pedirle al bot un resumen de ventas:
+escriben *informe* o *resumen*, el bot les pide la contraseña, y una vez
+logueados eligen por número un artista puntual (entradas vendidas, monto
+transferido y detalle de cada transferencia, separando *preventa* de
+*entrada general* cuando corresponda) o el resumen general con el total de
+todos los artistas.
+
+- La sesión se cierra sola tras `REPORT_ADMIN_SESSION_IDLE_MINUTES` sin
+  actividad, o antes si escriben *salir*.
+- Tras 5 contraseñas incorrectas seguidas, el número queda bloqueado 15
+  minutos (`REPORT_ADMIN_MAX_FAILED_ATTEMPTS` / `REPORT_ADMIN_LOCKOUT_MINUTES`
+  en `src/config/constants.ts`).
+- Escribiendo *informe final `<artista>`* o *reporte final `<artista>`* (antes
+  o después de loguearse) se manda por mail el reporte de ese artista puntual,
+  con un Excel adjunto (resumen + detalle de cada transferencia) a las
+  direcciones cargadas en `ADMIN_EMAILS`. Si `GMAIL_USER` /
+  `GMAIL_APP_PASSWORD` / `ADMIN_EMAILS` no están completos, el bot avisa que
+  el envío no está configurado en vez de fallar en silencio.
+
+Al cargar una etapa de venta (`presale_stages`) nueva a mano por SQL, hay que
+indicar su `stage_type` (`'general'` o `'preventa'`); si se omite, queda como
+`'general'` por default.
+
+## Auto-deploy (Fase 9)
+
+Hay un workflow en `.github/workflows/deploy.yml` que dispara un deploy en
+Coolify en cada push a `main`, pero está inactivo hasta que cargues estos
+secrets en el repo de GitHub (`Settings > Secrets and variables > Actions`):
+
+- `COOLIFY_DEPLOY_WEBHOOK_URL` (obligatorio): la URL de webhook de deploy de
+  esta app, desde el panel de Coolify (sección del recurso de la app →
+  Webhooks, o la URL de deploy de su API).
+- `COOLIFY_API_TOKEN` (opcional): solo si el método que uses en Coolify pide
+  un token vía header `Authorization: Bearer`, en vez de una URL de webhook
+  autocontenida.
+
+Mientras no cargues esos secrets, seguí disparando el deploy a mano como
+hasta ahora — el workflow no rompe nada, simplemente falla (avisando qué
+falta) si corre sin el secret configurado.
 
 ## Notas importantes
 
-- **`cbu_bank_prefixes`** solo tiene 4 bancos cargados como placeholder
-  (Nación, Provincia, Galicia, Ciudad). Antes de ir a producción hay que
-  completarla con el padrón oficial del BCRA — ver el comentario en
-  `scripts/seedCbuPrefixes.ts`.
 - **Mercado Pago no tiene sandbox para transferencias por alias/CVU.** La
   Fase 4 (verificación de pagos) requiere probar con transferencias reales
   de bajo monto — ver la sección 5 del plan.
 - No confirmar el webhook de WhatsApp contra el número real de negocio hasta
   completar la Fase 9 (la verificación de negocio ante Meta puede tardar
   varios días).
+
+## Checklist para dejar todo en producción (solo falta Mercado Pago)
+
+1. **Variables de entorno en Coolify** (además de las que ya están para que
+   el webhook de WhatsApp funcione): `REPORT_ADMIN_SESSION_IDLE_MINUTES`
+   (opcional, default 15), `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `ADMIN_EMAILS`.
+   `REPORT_ADMIN_PASSWORD_1/2/3` solo hacen falta un momento, para el paso 3.
+2. **Migraciones**: correr `npm run migrate:up` contra la base de producción
+   (agrega `stage_type`, `report_admins`, `report_admin_sessions`, el índice
+   de `orders.artist_id`, y elimina la tabla de prefijos de CBU que ya no se
+   usa).
+3. **Seed de admins de reportes**: con `REPORT_ADMIN_PASSWORD_1/2/3` cargadas,
+   correr `npm run seed:report-admins` apuntando a producción, y después
+   borrar esas 3 variables (las contraseñas ya quedaron hasheadas en la base).
+4. **Revisar `stage_type`** de las etapas de venta que ya estén cargadas en
+   producción: por default quedan en `'general'`; actualizar a `'preventa'`
+   a mano (`UPDATE presale_stages SET stage_type = 'preventa' WHERE id = ...`)
+   las que correspondan.
+5. **Deploy**: disparar el deploy en Coolify (manual, o activar el
+   auto-deploy de la sección anterior) para que tome todo el código nuevo.
+6. **Pendiente único: Mercado Pago.** Cargar el `MERCADOPAGO_ACCESS_TOKEN`
+   real de producción (y `MERCADOPAGO_WEBHOOK_SECRET` si corresponde) para
+   que la confirmación de pago deje de usar el modo mock y empiece a validar
+   contra la API de Mercado Pago de verdad.
