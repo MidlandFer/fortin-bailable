@@ -15,6 +15,13 @@ RUN apk add --no-cache curl
 COPY package*.json ./
 RUN npm ci --omit=dev
 COPY --from=build /app/dist ./dist
+COPY --from=build /app/tsconfig.json ./tsconfig.json
+# node-pg-migrate lee los .sql directamente (no pasan por tsc), y los scripts
+# de seed corren con tsx sobre el TypeScript original (importan desde
+# "../src/..."), así que hace falta el árbol fuente completo en runtime,
+# no solo el dist compilado.
+COPY --from=build /app/src ./src
+COPY --from=build /app/scripts ./scripts
 # TODO: sumar acá los estáticos de admin/scanner (views, public) cuando esas
 # fases del roadmap agreguen esos directorios (todavía no existen en Fase 1).
 
