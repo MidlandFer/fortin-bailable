@@ -138,12 +138,13 @@ Hay un workflow en `.github/workflows/deploy.yml` que dispara un deploy en
 Coolify en cada push a `main`, pero está inactivo hasta que cargues estos
 secrets en el repo de GitHub (`Settings > Secrets and variables > Actions`):
 
-- `COOLIFY_DEPLOY_WEBHOOK_URL` (obligatorio): la URL de webhook de deploy de
-  esta app, desde el panel de Coolify (sección del recurso de la app →
-  Webhooks, o la URL de deploy de su API).
-- `COOLIFY_API_TOKEN` (opcional): solo si el método que uses en Coolify pide
-  un token vía header `Authorization: Bearer`, en vez de una URL de webhook
-  autocontenida.
+- `COOLIFY_DEPLOY_WEBHOOK_URL`: la URL de deploy de esta app (en Coolify,
+  recurso de la app → Webhooks → *Deploy Webhook*).
+- `COOLIFY_API_TOKEN`: un token de la API de Coolify con permiso de deploy
+  (Keys & Tokens → API tokens). Coolify lo exige para esa URL.
+
+También se puede correr a mano desde la pestaña Actions de GitHub
+(*Deploy a Coolify* → *Run workflow*).
 
 Mientras no cargues esos secrets, seguí disparando el deploy a mano como
 hasta ahora — el workflow no rompe nada, simplemente falla (avisando qué
