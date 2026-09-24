@@ -61,47 +61,17 @@ export async function getSession(phone: string): Promise<ReportAdminSession | nu
   return { state: row.authenticated ? "active" : "pending_password" };
 }
 
-/**
- * Arranca el pedido de contraseña desde cero (sesión nueva): resetea intentos
- * fallidos y bloqueo previos. `pendingEmailQuery` guarda el artista pedido por
- * "informe final"/"reporte final" para mandarlo por mail apenas loguee.
- */
-export async function startPasswordPrompt(phone: string, pendingEmailQuery?: string): Promise<void> {
+/** Arranca el pedido de contraseña desde cero (sesión nueva): resetea intentos fallidos y bloqueo previos. */
+export async function startPasswordPrompt(phone: string): Promise<void> {
   await pool.query(
     `INSERT INTO report_admin_sessions
-       (phone_number, authenticated, last_activity_at, failed_attempts, locked_until, pending_email_query)
-     VALUES ($1, false, now(), 0, NULL, $2)
+       (phone_number, authenticated, last_activity_at, failed_attempts, locked_until)
+     VALUES ($1, false, now(), 0, NULL)
      ON CONFLICT (phone_number) DO UPDATE
        SET authenticated = false, last_activity_at = now(), failed_attempts = 0,
-           locked_until = NULL, pending_email_query = $2`,
-    [normalizePhone(phone), pendingEmailQuery ?? null],
+           locked_until = NULL`,
+    [normalizePhone(phone)],
   );
-}
-
-/** Actualiza el artista pedido por mail mientras sigue esperando la contraseña, sin tocar los intentos fallidos. */
-export async function updatePendingEmailQuery(phone: string, query: string): Promise<void> {
-  await pool.query(
-    `UPDATE report_admin_sessions SET pending_email_query = $2, last_activity_at = now()
-     WHERE phone_number = $1`,
-    [normalizePhone(phone), query],
-  );
-}
-
-/** Devuelve el artista pendiente de mandar por mail (si había) y lo limpia. */
-export async function consumePendingEmailQuery(phone: string): Promise<string | null> {
-  const normalized = normalizePhone(phone);
-  const result = await pool.query<{ pending_email_query: string | null }>(
-    `SELECT pending_email_query FROM report_admin_sessions WHERE phone_number = $1`,
-    [normalized],
-  );
-  const value = result.rows[0]?.pending_email_query ?? null;
-  if (value !== null) {
-    await pool.query(
-      `UPDATE report_admin_sessions SET pending_email_query = NULL WHERE phone_number = $1`,
-      [normalized],
-    );
-  }
-  return value;
 }
 
 /** Marca la sesión como logueada tras una contraseña correcta; limpia intentos fallidos y bloqueo. */

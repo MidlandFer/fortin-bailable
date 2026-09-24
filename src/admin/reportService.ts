@@ -40,21 +40,6 @@ export async function getArtistMenuOptions(): Promise<ArtistMenuOption[]> {
   return result.rows.map((r) => ({ artistId: r.id, artistName: r.name }));
 }
 
-/** Resuelve el artista pedido por número de menú o por nombre (exacto o parcial). */
-export function findArtistByQuery(query: string, artists: ArtistMenuOption[]): ArtistMenuOption | null {
-  const trimmed = query.trim();
-  const asNumber = Number(trimmed);
-  if (Number.isInteger(asNumber) && asNumber >= 1 && asNumber <= artists.length) {
-    return artists[asNumber - 1]!;
-  }
-  const normalized = trimmed.toLowerCase();
-  return (
-    artists.find((a) => a.artistName.toLowerCase() === normalized) ??
-    artists.find((a) => a.artistName.toLowerCase().includes(normalized)) ??
-    null
-  );
-}
-
 export async function getArtistReport(artistId: number): Promise<ArtistReport | null> {
   const artistResult = await pool.query<{ name: string }>(`SELECT name FROM artists WHERE id = $1`, [
     artistId,

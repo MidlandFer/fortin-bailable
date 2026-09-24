@@ -16,7 +16,7 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
 
   // Estas integraciones se van habilitando en fases posteriores del roadmap
-  // (Fase 2 WhatsApp, Fase 4 Mercado Pago, Fase 8 email). Se dejan
+  // (Fase 2 WhatsApp, Fase 4 Mercado Pago). Se dejan
   // opcionales para no bloquear el desarrollo de fases tempranas; cada módulo
   // que las use valida explícitamente que estén presentes antes de operar.
   WHATSAPP_TOKEN: optionalString(),
@@ -46,10 +46,6 @@ const envSchema = z.object({
   ADMIN_SEED_EMAIL: z.string().email(),
   ADMIN_SEED_PASSWORD: z.string().min(8),
 
-  GMAIL_USER: optionalString(z.string().email()),
-  GMAIL_APP_PASSWORD: optionalString(),
-  ADMIN_EMAILS: z.string().default(""),
-
   RESERVATION_TTL_MINUTES: z.coerce.number().int().positive().default(5),
   // Tras ingresar la contraseña, un admin de reportes queda logueado en su
   // conversación de WhatsApp hasta que pasen tantos minutos sin consultar nada.
@@ -70,7 +66,6 @@ if (!parsed.success) {
 
 export const env = {
   ...parsed.data,
-  adminEmails: parsed.data.ADMIN_EMAILS.split(",").map((e) => e.trim()).filter(Boolean),
   verifierPhoneNumbers: parsed.data.VERIFIER_PHONE_NUMBERS.split(",")
     .map((p) => p.trim())
     .filter(Boolean),

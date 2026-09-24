@@ -30,10 +30,7 @@ function adminMenuOpciones(artists: ArtistMenuOption[]): string {
   );
 }
 
-const ADMIN_FOOTER_MAIL =
-  "Para recibirlo por mail, escribí *informe final <artista>* o *reporte final <artista>*.";
-
-const ADMIN_FOOTER_NAVEGACION = `Escribí otro número para ver otro artista, o *salir* para cerrar sesión.\n${ADMIN_FOOTER_MAIL}`;
+const ADMIN_FOOTER_NAVEGACION = "Escribí otro número para ver otro artista, o *salir* para cerrar sesión.";
 
 function artistListText(artists: ArtistOption[]): string {
   return artists
@@ -150,7 +147,7 @@ export const messages = {
 
   adminMenu: (artists: ArtistMenuOption[]) =>
     `✅ Acceso concedido. ¿Qué querés ver?\n\n${adminMenuOpciones(artists)}\n\n` +
-    `Respondé con un número, o escribí *salir* para cerrar sesión.\n${ADMIN_FOOTER_MAIL}`,
+    "Respondé con un número, o escribí *salir* para cerrar sesión.",
 
   adminOpcionInvalida: (artists: ArtistMenuOption[]) =>
     `No entendí esa opción 🤔. Elegí un número:\n\n${adminMenuOpciones(artists)}`,
@@ -164,16 +161,6 @@ export const messages = {
 
   adminBloqueado: (minutesRemaining: number) =>
     `🔒 Demasiadas contraseñas incorrectas. Probá de nuevo en ${minutesRemaining} minuto(s).`,
-
-  adminMailEnviado: (artistName: string, recipients: string[]) =>
-    `📧 Te mandé el reporte de *${artistName}* por mail a: ${recipients.join(", ")}.`,
-
-  adminMailNoConfigurado:
-    "No pude mandar el mail: todavía falta configurar el envío (GMAIL_USER, GMAIL_APP_PASSWORD o ADMIN_EMAILS).",
-
-  adminArtistaNoEncontradoParaMail: (query: string, artists: ArtistMenuOption[]) =>
-    `No encontré ningún artista que coincida con "${query}" 🤔. Elegí uno de estos:\n\n` +
-    artists.map((a, i) => `${i + 1}. ${a.artistName}`).join("\n"),
 
   adminResumenGeneral: (rows: GeneralReportRow[]) => {
     if (rows.length === 0) return "Todavía no hay artistas cargados en el sistema.";

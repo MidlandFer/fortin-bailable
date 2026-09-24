@@ -2,7 +2,7 @@
 
 Sistema para vender entradas por artista vía WhatsApp, cobrar por transferencia
 (Mercado Pago), emitir entradas con QR, controlar el ingreso el día del evento
-desde varios celulares, y generar/enviar el reporte de ventas por mail.
+desde varios celulares, y consultar el reporte de ventas por WhatsApp.
 
 Ver el plan completo de arquitectura y roadmap en
 `C:\Users\Usuario\.claude\plans\necesito-que-te-p-ngas-iridescent-crab.md`.
@@ -12,7 +12,7 @@ Ver el plan completo de arquitectura y roadmap en
 Implementado y probado: venta de entradas por WhatsApp (por artista, con
 preventa y stock), emisión de entradas con QR firmado, control de acceso por
 WhatsApp (verificadores que escanean/mandan el QR), y el bot de admins de
-reportes de venta (con envío del reporte por mail a pedido). El auto-deploy a
+reportes de venta. El auto-deploy a
 Coolify está armado pero sin activar (ver más abajo). **Lo único que falta
 para estar 100% en producción es Mercado Pago real** (hoy corre en modo mock:
 confirma el pago sin corroborarlo, porque no hay `MERCADOPAGO_ACCESS_TOKEN` de
@@ -73,7 +73,6 @@ más abajo.
   migraciones y probar el servidor contra una base de datos real.
 - Una cuenta de Mercado Pago con Access Token (Fase 4)
 - Una app de Meta for Developers con el producto WhatsApp habilitado (Fase 2)
-- Una cuenta de Gmail con contraseña de aplicación (Fase 8)
 
 ## Setup local
 
@@ -128,12 +127,6 @@ todos los artistas.
 - Tras 5 contraseñas incorrectas seguidas, el número queda bloqueado 15
   minutos (`REPORT_ADMIN_MAX_FAILED_ATTEMPTS` / `REPORT_ADMIN_LOCKOUT_MINUTES`
   en `src/config/constants.ts`).
-- Escribiendo *informe final `<artista>`* o *reporte final `<artista>`* (antes
-  o después de loguearse) se manda por mail el reporte de ese artista puntual,
-  con un Excel adjunto (resumen + detalle de cada transferencia) a las
-  direcciones cargadas en `ADMIN_EMAILS`. Si `GMAIL_USER` /
-  `GMAIL_APP_PASSWORD` / `ADMIN_EMAILS` no están completos, el bot avisa que
-  el envío no está configurado en vez de fallar en silencio.
 
 Al cargar una etapa de venta (`presale_stages`) nueva a mano por SQL, hay que
 indicar su `stage_type` (`'general'` o `'preventa'`); si se omite, queda como
@@ -169,7 +162,7 @@ falta) si corre sin el secret configurado.
 
 1. **Variables de entorno en Coolify** (además de las que ya están para que
    el webhook de WhatsApp funcione): `REPORT_ADMIN_SESSION_IDLE_MINUTES`
-   (opcional, default 15), `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `ADMIN_EMAILS`.
+   (opcional, default 15).
    `REPORT_ADMIN_PASSWORD_1/2/3` solo hacen falta un momento, para el paso 3.
 2. **Migraciones**: correr `npm run migrate:up` contra la base de producción
    (agrega `stage_type`, `report_admins`, `report_admin_sessions`, el índice

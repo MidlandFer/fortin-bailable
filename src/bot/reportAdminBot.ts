@@ -2,23 +2,13 @@ import { messages } from "./messages";
 import {
   getSession,
   startPasswordPrompt,
-  updatePendingEmailQuery,
-  consumePendingEmailQuery,
   markAuthenticated,
   touchSession,
   recordFailedAttempt,
   endSession,
   verifyReportAdminPassword,
 } from "../admin/reportAdminService";
-import { getArtistMenuOptions, getArtistReport, getGeneralReport, findArtistByQuery } from "../admin/reportService";
-import { sendArtistSalesReportEmail, EmailNotConfiguredError } from "../admin/salesReportEmail";
-
-const FINAL_REPORT_PATTERN = /^(?:informe final|reporte final)\s+(.+)$/i;
-
-function parseFinalReportQuery(text: string): string | null {
-  const match = text.trim().match(FINAL_REPORT_PATTERN);
-  return match ? match[1]!.trim() : null;
-}
+import { getArtistMenuOptions, getArtistReport, getGeneralReport } from "../admin/reportService";
 
 function isTriggerWord(text: string): boolean {
   const normalized = text.trim().toLowerCase();
@@ -39,42 +29,19 @@ function minutesUntil(date: Date): number {
   return Math.max(1, Math.ceil((date.getTime() - Date.now()) / 60000));
 }
 
-/** Resuelve el artista pedido por "informe final"/"reporte final" y le manda el reporte por mail. */
-async function emailArtistReport(query: string): Promise<string> {
-  const artists = await getArtistMenuOptions();
-  const artist = findArtistByQuery(query, artists);
-  if (!artist) return messages.adminArtistaNoEncontradoParaMail(query, artists);
-
-  try {
-    const { recipients, artistName } = await sendArtistSalesReportEmail(artist.artistId);
-    return messages.adminMailEnviado(artistName, recipients);
-  } catch (err) {
-    if (err instanceof EmailNotConfiguredError) return messages.adminMailNoConfigurado;
-    throw err;
-  }
-}
-
 /**
  * Atiende a los admins de reportes de venta en 3 etapas:
- * 1. Sin sesión: solo reacciona a "informe"/"resumen" (menú) o a
- *    "informe final"/"reporte final" + artista (pide la contraseña y, apenas
- *    loguea, manda ese reporte por mail sin pasar por el menú).
+ * 1. Sin sesión: solo reacciona a "informe"/"resumen", pidiendo la contraseña.
  * 2. Pendiente de contraseña: el próximo mensaje se valida contra el hash
  *    guardado; tras REPORT_ADMIN_MAX_FAILED_ATTEMPTS fallos seguidos, la
  *    sesión se bloquea por REPORT_ADMIN_LOCKOUT_MINUTES.
- * 3. Autenticado: elige por número un artista puntual o el resumen general,
- *    o pide por mail el reporte de cualquier artista con "informe final"/"reporte final" + artista.
+ * 3. Autenticado: elige por número un artista puntual o el resumen general.
  */
 export async function handleReportAdminMessage(phone: string, text: string): Promise<string> {
   const trimmed = text.trim();
-  const finalReportQuery = parseFinalReportQuery(trimmed);
   const session = await getSession(phone);
 
   if (session === null) {
-    if (finalReportQuery) {
-      await startPasswordPrompt(phone, finalReportQuery);
-      return messages.adminPedirContrasena;
-    }
     if (!isTriggerWord(trimmed)) return messages.adminPedirPalabraClave;
     await startPasswordPrompt(phone);
     return messages.adminPedirContrasena;
@@ -85,10 +52,6 @@ export async function handleReportAdminMessage(phone: string, text: string): Pro
   }
 
   if (session.state === "pending_password") {
-    if (finalReportQuery) {
-      await updatePendingEmailQuery(phone, finalReportQuery);
-      return messages.adminPedirContrasena;
-    }
     if (isTriggerWord(trimmed)) {
       await touchSession(phone);
       return messages.adminPedirContrasena;
@@ -102,10 +65,7 @@ export async function handleReportAdminMessage(phone: string, text: string): Pro
         : messages.adminContrasenaIncorrecta;
     }
 
-    const pendingQuery = await consumePendingEmailQuery(phone);
     await markAuthenticated(phone);
-
-    if (pendingQuery) return emailArtistReport(pendingQuery);
     return messages.adminMenu(await getArtistMenuOptions());
   }
 
@@ -116,8 +76,6 @@ export async function handleReportAdminMessage(phone: string, text: string): Pro
   }
 
   await touchSession(phone);
-
-  if (finalReportQuery) return emailArtistReport(finalReportQuery);
 
   const artists = await getArtistMenuOptions();
   if (isMenuCommand(trimmed)) {
