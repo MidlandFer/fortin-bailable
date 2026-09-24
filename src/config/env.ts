@@ -16,7 +16,7 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
 
   // Estas integraciones se van habilitando en fases posteriores del roadmap
-  // (Fase 2 WhatsApp, Fase 3.5 IA, Fase 4 Mercado Pago, Fase 8 email). Se dejan
+  // (Fase 2 WhatsApp, Fase 4 Mercado Pago, Fase 8 email). Se dejan
   // opcionales para no bloquear el desarrollo de fases tempranas; cada módulo
   // que las use valida explícitamente que estén presentes antes de operar.
   WHATSAPP_TOKEN: optionalString(),
@@ -39,8 +39,6 @@ const envSchema = z.object({
   MERCADOPAGO_ACCESS_TOKEN: optionalString(),
   MERCADOPAGO_WEBHOOK_SECRET: optionalString(),
   MP_ALIAS: z.string().min(1).default("fortin.baile"),
-
-  ANTHROPIC_API_KEY: optionalString(),
 
   QR_SIGNING_SECRET: z.string().min(16),
   SESSION_SECRET: z.string().min(16),

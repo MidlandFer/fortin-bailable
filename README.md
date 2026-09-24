@@ -63,9 +63,6 @@ nuevo deploy manualmente (por la API de Coolify o desde su panel), salvo que
 actives el workflow de auto-deploy ya armado — ver la sección "Auto-deploy"
 más abajo.
 
-La capa de IA (Anthropic) no está implementada; `ANTHROPIC_API_KEY` queda
-cargada en el `.env` para cuando se defina qué uso puntual se le va a dar.
-
 ## Requisitos
 
 - Node.js 20.x (el proyecto fija `engines.node` en `20.x`; localmente se probó
@@ -77,7 +74,6 @@ cargada en el `.env` para cuando se defina qué uso puntual se le va a dar.
 - Una cuenta de Mercado Pago con Access Token (Fase 4)
 - Una app de Meta for Developers con el producto WhatsApp habilitado (Fase 2)
 - Una cuenta de Gmail con contraseña de aplicación (Fase 8)
-- Un API key de Anthropic (Fase 3.5)
 
 ## Setup local
 
