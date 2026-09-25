@@ -21,5 +21,5 @@ jobs:
           # --fail-with-body: si Coolify rechaza el pedido, el log muestra su
           # respuesta (ej. token inválido, permiso faltante, uuid inexistente).
           curl --fail-with-body --silent --show-error -w "\nHTTP %{http_code}\n" \
-            -X GET "$COOLIFY_DEPLOY_WEBHOOK_URL" \
+            -X POST "$COOLIFY_DEPLOY_WEBHOOK_URL" \
             -H "Authorization: Bearer $COOLIFY_API_TOKEN"
